@@ -16,6 +16,7 @@ from app.utils.constants import (
     TOKEN_TYPE_BEARER,
 )
 
+
 class RegisterRequest(BaseModel):
     """Payload for POST /auth/signup."""
 

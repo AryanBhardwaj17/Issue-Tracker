@@ -1,8 +1,8 @@
 """
 User ORM model.
 
-Represents a registered account. Username and email uniqueness is enforced
-at three layers: DB constraint (here), service pre-check, and an
+Represents a registered account. Name and email uniqueness is enforced
+at three layers: DB constraint (here), service pre-check / retry loop, and an
 IntegrityError handler in main.py.
 """
 
@@ -24,13 +24,12 @@ class User(Base):
 
     __tablename__ = "users"
     __table_args__ = (
-        UniqueConstraint("username", name="uq_users_username"),
+        UniqueConstraint("name", name="uq_users_name"),
         UniqueConstraint("email", name="uq_users_email"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -53,4 +52,4 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User id={self.id} username={self.username!r}>"
+        return f"<User id={self.id} name={self.name!r}>"
