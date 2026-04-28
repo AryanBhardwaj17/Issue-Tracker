@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
-
-export default function HomePage() {
-  redirect("/login");
+import RegisterForm from "@/components/auth/RegisterForm";
+import Card from "@/components/ui/Card";
+ 
+export default function RegisterPage() {
+  return (
+    <Card className="w-full max-w-md">
+      <RegisterForm />
+    </Card>
+  );
 }

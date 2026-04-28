@@ -7,9 +7,10 @@ in bulk (logout-all).  Cascade DELETE ensures tokens are removed when the
 parent user is deleted.
 """
 
+import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -24,11 +25,11 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     __table_args__ = (UniqueConstraint("token", name="uq_refresh_token"),)
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     # SHA-256 hex digest is always 64 characters.
     token: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
