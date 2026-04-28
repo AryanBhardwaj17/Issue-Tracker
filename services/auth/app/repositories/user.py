@@ -7,6 +7,7 @@ in the service layer.
 """
 
 import logging
+import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +37,7 @@ async def create_user(
     return user
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> User | None:
     """Return the user with ``user_id``, or None if not found."""
     return await db.get(User, user_id)
 

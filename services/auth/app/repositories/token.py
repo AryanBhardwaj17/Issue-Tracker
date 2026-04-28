@@ -7,6 +7,7 @@ service layer before calling here.
 """
 
 import logging
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def create_refresh_token(
     db: AsyncSession,
     *,
-    user_id: int,
+    user_id: uuid.UUID,
     token: str,
     expires_days: int = 7,
 ) -> RefreshToken:
@@ -44,6 +45,3 @@ async def get_refresh_token(db: AsyncSession, token: str) -> RefreshToken | None
     """Return the token record matching the SHA-256 hash ``token``, or None."""
     result = await db.execute(select(RefreshToken).where(RefreshToken.token == token))
     return result.scalar_one_or_none()
-
-
-

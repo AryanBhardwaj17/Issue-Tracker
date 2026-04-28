@@ -7,14 +7,16 @@ returned by the API and never exposes the password hash.
 fields are applied by the service layer.
 """
 
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+
 class UserResponse(BaseModel):
     """Public user representation returned by API responses."""
 
-    id: int
+    id: uuid.UUID
     name: str
     email: EmailStr
     created_at: datetime

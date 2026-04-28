@@ -5,14 +5,18 @@ Validation constraints (lengths, pattern) are imported from ``utils.constants``
 so they stay in sync with the ORM model column definitions.
 """
 
-from pydantic import BaseModel, EmailStr, Field
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.user import UserResponse
 from app.utils.constants import (
+    ERR_WEAK_PASSWORD,
     NAME_MAX_LENGTH,
     NAME_MIN_LENGTH,
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
+    PASSWORD_REGEX,
     TOKEN_TYPE_BEARER,
 )
 
@@ -24,11 +28,20 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not re.fullmatch(PASSWORD_REGEX, v):
+            raise ValueError(ERR_WEAK_PASSWORD)
+        return v
+
+
 class LoginRequest(BaseModel):
     """Payload for POST /auth/login."""
 
     email: EmailStr
     password: str
+
 
 class AccessTokenResponse(BaseModel):
     """Returned after a token refresh — only the new access token in the body."""

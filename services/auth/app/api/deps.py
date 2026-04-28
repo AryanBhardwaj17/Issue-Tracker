@@ -6,6 +6,8 @@ header and returns the authenticated ``User`` ORM instance.  All protected
 routes should declare ``current_user: User = Depends(get_current_user)``.
 """
 
+import uuid
+
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
@@ -42,7 +44,7 @@ async def get_current_user(
 
     try:
         payload = decode_access_token(credentials.credentials)
-        user_id = int(payload["sub"])
+        user_id = uuid.UUID(payload["sub"])
     except (JWTError, KeyError, ValueError) as exc:
         raise InvalidAccessTokenError() from exc
 
