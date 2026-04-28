@@ -16,6 +16,7 @@ from app.core.database import get_db
 from app.schemas.auth import (
     AuthResponse,
     RegisterRequest,
+    LoginRequest
 )
 from app.services import auth as auth_service
 from app.utils.constants import AUTH_COOKIE_PATH, REFRESH_TOKEN_COOKIE
@@ -59,6 +60,21 @@ async def signup(
         email=body.email,
         password=body.password,
     )
+    _set_refresh_cookie(response, tokens["refresh_token"])
+    return AuthResponse(
+        user=user,  # type: ignore[arg-type]
+        access_token=tokens["access_token"],
+        refresh_token=tokens["refresh_token"],
+    )
+
+@router.post("/login", response_model=AuthResponse)
+async def login(
+    body: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> AuthResponse:
+    """Authenticate and issue tokens."""
+    user, tokens = await auth_service.login(db, email=body.email, password=body.password)
     _set_refresh_cookie(response, tokens["refresh_token"])
     return AuthResponse(
         user=user,  # type: ignore[arg-type]
