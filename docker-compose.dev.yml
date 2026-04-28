@@ -98,6 +98,23 @@ services:
       timeout: 5s
       retries: 5
 
+# Auth service 
+
+  auth-service:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
+    container_name: auth-service
+    env_file:
+      - ./services/auth/.env
+    environment:
+      # Override DB host to point to the Docker network, not localhost
+      DATABASE_URL: postgresql+asyncpg://auth_user:auth_pass@auth-db:5432/auth_db
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - issue-tracker-net
 
 # ── Named volumes ─────────────────────────────────────────────────────────────
 

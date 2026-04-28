@@ -52,6 +52,7 @@ async def signup(
     db: AsyncSession = Depends(get_db),
 ) -> AuthResponse:
     """Register a new user account and issue tokens."""
+    print("Signup request:", body.email) 
     user, tokens = await auth_service.register(
         db,
         name=body.name,
