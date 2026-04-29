@@ -62,9 +62,12 @@ test:auth:
     POSTGRES_PASSWORD: auth_pass
     POSTGRES_DB: auth_db
     DATABASE_URL: postgresql+asyncpg://auth_user:auth_pass@auth-db:5432/auth_db
-    RSA_PRIVATE_KEY: $AUTH_RSA_PRIVATE_KEY
-    RSA_PUBLIC_KEY: $AUTH_RSA_PUBLIC_KEY
   script:
+    - apt-get update -qq && apt-get install -y -qq openssl > /dev/null 2>&1
+    - openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out /tmp/private.pem 2>/dev/null
+    - openssl rsa -in /tmp/private.pem -pubout -out /tmp/public.pem 2>/dev/null
+    - export RSA_PRIVATE_KEY="$(cat /tmp/private.pem)"
+    - export RSA_PUBLIC_KEY="$(cat /tmp/public.pem)"
     - cd services/auth
     - pip install ".[dev]"
     - pytest tests/ -v
