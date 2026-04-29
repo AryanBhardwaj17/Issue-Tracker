@@ -1,0 +1,108 @@
+services:
+  # ── Infrastructure ───────────────────────────────────────────────────────────
+
+  auth-db:
+    image: postgres:16-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASS}
+      POSTGRES_DB: ${AUTH_DB_NAME}
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - issue-tracker-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Services ─────────────────────────────────────────────────────────────────
+
+  auth-service:
+    image: ${IMAGE_AUTH}
+    container_name: auth-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${AUTH_DB_USER}:${AUTH_DB_PASS}@auth-db:5432/${AUTH_DB_NAME}
+      RSA_PRIVATE_KEY: ${RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${RSA_PUBLIC_KEY}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - issue-tracker-net
+
+  # core-service:
+  #   image: ${IMAGE_CORE}
+  #   container_name: core-service
+  #   environment:
+  #     DATABASE_URL: postgresql+asyncpg://${CORE_DB_USER}:${CORE_DB_PASS}@core-db:5432/${CORE_DB_NAME}
+  #   depends_on:
+  #     core-db:
+  #       condition: service_healthy
+  #   networks:
+  #     - issue-tracker-net
+
+  # notification-service:
+  #   image: ${IMAGE_NOTIFICATION}
+  #   container_name: notification-service
+  #   environment:
+  #     DATABASE_URL: postgresql+asyncpg://${NOTIF_DB_USER}:${NOTIF_DB_PASS}@notifications-db:5432/${NOTIF_DB_NAME}
+  #     RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #   networks:
+  #     - issue-tracker-net
+
+  # ── Gateway ──────────────────────────────────────────────────────────────────
+
+  gateway:
+    image: ${IMAGE_GATEWAY}
+    container_name: gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+    networks:
+      - issue-tracker-net
+
+  # ── Client ────────────────────────────────────────────────────────────────────
+
+  client:
+    image: ${IMAGE_CLIENT}
+    container_name: client
+    ports:
+      - "3000:3000"
+    networks:
+      - issue-tracker-net
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+
+volumes:
+  auth-db-data:
+  rabbitmq_data:
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+
+networks:
+  issue-tracker-net:
+    driver: bridge

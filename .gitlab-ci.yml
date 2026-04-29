@@ -1,0 +1,229 @@
+stages:
+  - lint
+  - test
+  - build
+  - migrate
+  - deploy
+
+variables:
+  IMAGE_AUTH:         $CI_REGISTRY_IMAGE/auth-service:$CI_COMMIT_SHORT_SHA
+  IMAGE_CLIENT:       $CI_REGISTRY_IMAGE/client:$CI_COMMIT_SHORT_SHA
+  IMAGE_GATEWAY:      $CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_SHORT_SHA
+  IMAGE_CORE:         $CI_REGISTRY_IMAGE/core-service:$CI_COMMIT_SHORT_SHA
+  IMAGE_NOTIFICATION: $CI_REGISTRY_IMAGE/notification-service:$CI_COMMIT_SHORT_SHA
+
+# ── LINT ──────────────────────────────────────────────────────────────────────
+
+lint:auth:
+  stage: lint
+  image: python:3.13-slim
+  script:
+    - pip install ruff
+    - ruff check services/auth/app
+  rules:
+    - changes:
+        - services/auth/**/*
+
+lint:core:
+  stage: lint
+  image: python:3.13-slim
+  script:
+    - pip install ruff
+    - ruff check services/core/app
+  rules:
+    - changes:
+        - services/core/**/*
+
+lint:notification:
+  stage: lint
+  image: python:3.13-slim
+  script:
+    - pip install ruff
+    - ruff check services/notification/app
+  rules:
+    - changes:
+        - services/notification/**/*
+
+lint:client:
+  stage: lint
+  image: node:20-alpine
+  cache:
+    key: client-$CI_COMMIT_REF_SLUG
+    paths:
+      - client/node_modules/
+  script:
+    - cd client && npm ci && npm run lint
+  rules:
+    - changes:
+        - client/**/*
+
+# ── TEST ──────────────────────────────────────────────────────────────────────
+
+test:auth:
+  stage: test
+  image: python:3.13-slim
+  services:
+    - name: postgres:16-alpine
+      alias: auth-db
+  variables:
+    POSTGRES_USER: auth_user
+    POSTGRES_PASSWORD: auth_pass
+    POSTGRES_DB: auth_db
+    DATABASE_URL: postgresql+asyncpg://auth_user:auth_pass@auth-db:5432/auth_db
+    RSA_PRIVATE_KEY: $AUTH_RSA_PRIVATE_KEY
+    RSA_PUBLIC_KEY: $AUTH_RSA_PUBLIC_KEY
+  script:
+    - cd services/auth
+    - pip install ".[dev]"
+    - pytest tests/ -v
+  rules:
+    - changes:
+        - services/auth/**/*
+
+test:core:
+  stage: test
+  image: python:3.13-slim
+  services:
+    - name: postgres:16-alpine
+      alias: core-db
+  variables:
+    POSTGRES_USER: core_user
+    POSTGRES_PASSWORD: core_pass
+    POSTGRES_DB: core_db
+  script:
+    - cd services/core
+    - pip install ".[dev]" 2>/dev/null || true
+    - pytest tests/ -v
+  rules:
+    - changes:
+        - services/core/**/*
+
+test:notification:
+  stage: test
+  image: python:3.13-slim
+  script:
+    - cd services/notification
+    - pip install ".[dev]" 2>/dev/null || true
+    - pytest tests/ -v
+  rules:
+    - changes:
+        - services/notification/**/*
+
+# ── BUILD ─────────────────────────────────────────────────────────────────────
+
+.docker_base: &docker_base
+  image: docker:26
+  services:
+    - docker:26-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+build:auth:
+  <<: *docker_base
+  stage: build
+  script:
+    - docker build -t $IMAGE_AUTH ./services/auth
+    - docker push $IMAGE_AUTH
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/auth/**/*
+
+build:core:
+  <<: *docker_base
+  stage: build
+  script:
+    - docker build -t $IMAGE_CORE ./services/core
+    - docker push $IMAGE_CORE
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/core/**/*
+
+build:notification:
+  <<: *docker_base
+  stage: build
+  script:
+    - docker build -t $IMAGE_NOTIFICATION ./services/notification
+    - docker push $IMAGE_NOTIFICATION
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/notification/**/*
+
+build:client:
+  <<: *docker_base
+  stage: build
+  script:
+    - docker build -t $IMAGE_CLIENT ./client
+    - docker push $IMAGE_CLIENT
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - client/**/*
+
+build:gateway:
+  <<: *docker_base
+  stage: build
+  script:
+    - docker build -t $IMAGE_GATEWAY ./gateway
+    - docker push $IMAGE_GATEWAY
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - gateway/**/*
+
+# ── MIGRATE ───────────────────────────────────────────────────────────────────
+
+migrate:auth:
+  stage: migrate
+  image: python:3.13-slim
+  variables:
+    DATABASE_URL: postgresql+asyncpg://$AUTH_DB_USER:$AUTH_DB_PASS@$DEPLOY_HOST:5433/$AUTH_DB_NAME
+    RSA_PRIVATE_KEY: $AUTH_RSA_PRIVATE_KEY
+    RSA_PUBLIC_KEY: $AUTH_RSA_PUBLIC_KEY
+  script:
+    - cd services/auth
+    - pip install "."
+    - alembic upgrade head
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/auth/alembic/**/*
+  when: manual
+
+# migrate:core:  — uncomment when core alembic migrations exist
+# migrate:notification:  — uncomment when notification alembic migrations exist
+
+# ── DEPLOY ────────────────────────────────────────────────────────────────────
+
+deploy:
+  stage: deploy
+  image: alpine:3.19
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$DEPLOY_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_HOST "
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        export IMAGE_AUTH=$IMAGE_AUTH &&
+        export IMAGE_CLIENT=$IMAGE_CLIENT &&
+        export IMAGE_GATEWAY=$IMAGE_GATEWAY &&
+        export AUTH_DB_USER=$AUTH_DB_USER &&
+        export AUTH_DB_PASS=$AUTH_DB_PASS &&
+        export AUTH_DB_NAME=$AUTH_DB_NAME &&
+        export RSA_PRIVATE_KEY='$AUTH_RSA_PRIVATE_KEY' &&
+        export RSA_PUBLIC_KEY='$AUTH_RSA_PUBLIC_KEY' &&
+        export RABBITMQ_USER=$RABBITMQ_USER &&
+        export RABBITMQ_PASS=$RABBITMQ_PASS &&
+        cd /opt/issue-tracker &&
+        docker compose pull &&
+        docker compose up -d --remove-orphans
+      "
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  when: manual
