@@ -74,6 +74,7 @@ test:auth:
   rules:
     - changes:
         - services/auth/**/*
+        - .gitlab-ci.yml
 
 test:core:
   stage: test
