@@ -111,68 +111,61 @@ test:notification:
     - changes:
         - services/notification/**/*
 
-# ── BUILD ─────────────────────────────────────────────────────────────────────
+# ── BUILD (Kaniko — works on shared k8s runners without Docker daemon) ───────
 
-.docker_base: &docker_base
-  image: docker:26
-  services:
-    - docker:26-dind
+.kaniko_base: &kaniko_base
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(printf '%s:%s' "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" | base64)\"}}}" > /kaniko/.docker/config.json
 
 build:auth:
-  <<: *docker_base
-  stage: build
+  <<: *kaniko_base
   script:
-    - docker build -t $IMAGE_AUTH ./services/auth
-    - docker push $IMAGE_AUTH
+    - /kaniko/executor --context $CI_PROJECT_DIR/services/auth --dockerfile $CI_PROJECT_DIR/services/auth/Dockerfile --destination $IMAGE_AUTH
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - services/auth/**/*
 
 build:core:
-  <<: *docker_base
-  stage: build
+  <<: *kaniko_base
   script:
-    - docker build -t $IMAGE_CORE ./services/core
-    - docker push $IMAGE_CORE
+    - /kaniko/executor --context $CI_PROJECT_DIR/services/core --dockerfile $CI_PROJECT_DIR/services/core/Dockerfile --destination $IMAGE_CORE
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - services/core/**/*
 
 build:notification:
-  <<: *docker_base
-  stage: build
+  <<: *kaniko_base
   script:
-    - docker build -t $IMAGE_NOTIFICATION ./services/notification
-    - docker push $IMAGE_NOTIFICATION
+    - /kaniko/executor --context $CI_PROJECT_DIR/services/notification --dockerfile $CI_PROJECT_DIR/services/notification/Dockerfile --destination $IMAGE_NOTIFICATION
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - services/notification/**/*
 
 build:client:
-  <<: *docker_base
-  stage: build
+  <<: *kaniko_base
   script:
-    - docker build -t $IMAGE_CLIENT ./client
-    - docker push $IMAGE_CLIENT
+    - /kaniko/executor --context $CI_PROJECT_DIR/client --dockerfile $CI_PROJECT_DIR/client/Dockerfile --destination $IMAGE_CLIENT
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - client/**/*
 
 build:gateway:
-  <<: *docker_base
-  stage: build
+  <<: *kaniko_base
   script:
-    - docker build -t $IMAGE_GATEWAY ./gateway
-    - docker push $IMAGE_GATEWAY
+    - /kaniko/executor --context $CI_PROJECT_DIR/gateway --dockerfile $CI_PROJECT_DIR/gateway/Dockerfile --destination $IMAGE_GATEWAY
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
+        - gateway/**/*
         - gateway/**/*
 
 # ── MIGRATE ───────────────────────────────────────────────────────────────────
