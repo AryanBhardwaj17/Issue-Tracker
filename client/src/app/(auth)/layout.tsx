@@ -18,7 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <main className="min-h-screen flex items-center justify-center">
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   registerUser,
   loginUser,
+  logoutUser,
   type User,
 } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errors";
@@ -59,6 +60,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Proceed even if server logout fails
     } finally {
       sessionStorage.removeItem("access_token");
+      sessionStorage.removeItem("user");
       set({ user: null, error: null });
     }
   },
