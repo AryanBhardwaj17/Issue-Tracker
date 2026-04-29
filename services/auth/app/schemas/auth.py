@@ -57,3 +57,11 @@ class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = TOKEN_TYPE_BEARER
+
+
+class ChangePasswordRequest(BaseModel):
+    """Payload for PUT /users/me/password."""
+ 
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+ 

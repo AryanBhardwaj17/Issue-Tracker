@@ -8,18 +8,21 @@ while non-browser clients (mobile, CLI) can read the body.
 
 import logging
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response , Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.exceptions import InvalidRefreshTokenError
 from app.schemas.auth import (
     AuthResponse,
     RegisterRequest,
+    AccessTokenResponse,
     LoginRequest
 )
+from app.schemas.common import MessageResponse
 from app.services import auth as auth_service
-from app.utils.constants import AUTH_COOKIE_PATH, REFRESH_TOKEN_COOKIE
+from app.utils.constants import AUTH_COOKIE_PATH, REFRESH_TOKEN_COOKIE, ERR_REFRESH_TOKEN_REQUIRED
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,15 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
-
+def _clear_refresh_cookie(response: Response) -> None:
+    """Delete the refresh token cookie."""
+    response.delete_cookie(
+        key=REFRESH_TOKEN_COOKIE,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax",
+        path=AUTH_COOKIE_PATH,
+    )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -81,3 +92,51 @@ async def login(
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
     )
+
+@router.post("/refresh", response_model=AccessTokenResponse)
+async def refresh(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> AccessTokenResponse:
+    """Rotate the refresh token and issue a new access token.
+ 
+    Reads the refresh token from the cookie first; falls back to the JSON body
+    field ``refresh_token`` if the cookie is absent.
+    """
+    raw_token = request.cookies.get(REFRESH_TOKEN_COOKIE)
+    if not raw_token:
+        try:
+            body = await request.json()
+            raw_token = body.get("refresh_token")
+        except Exception:
+            raw_token = None
+ 
+    if not raw_token:
+        raise InvalidRefreshTokenError(ERR_REFRESH_TOKEN_REQUIRED)
+ 
+    tokens = await auth_service.refresh_tokens(db, refresh_token=raw_token)
+    _set_refresh_cookie(response, tokens["refresh_token"])
+    return AccessTokenResponse(access_token=tokens["access_token"])
+ 
+ 
+@router.post("/logout", response_model=MessageResponse)
+async def logout(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Revoke the current refresh token and clear the cookie."""
+    raw_token = request.cookies.get(REFRESH_TOKEN_COOKIE)
+    if not raw_token:
+        try:
+            body = await request.json()
+            raw_token = body.get("refresh_token")
+        except Exception:
+            raw_token = None
+ 
+    if raw_token:
+        await auth_service.logout(db, refresh_token=raw_token)
+ 
+    _clear_refresh_cookie(response)
+    return MessageResponse(message="Logged out successfully")

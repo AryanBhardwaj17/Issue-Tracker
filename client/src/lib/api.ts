@@ -37,3 +37,36 @@ export async function loginUser(payload: {
   const { data } = await api.post<AuthResponse>("/auth/login", payload);
   return data;
 }
+
+export async function refreshToken(): Promise<{ access_token: string }> {
+  const { data } = await api.post<{ access_token: string; token_type: string }>(
+    "/auth/refresh",
+  );
+  return data;
+}
+ 
+export async function logoutUser(): Promise<MessageResponse> {
+  const { data } = await api.post<MessageResponse>("/auth/logout");
+  return data;
+}
+ 
+// ─── User API ────────────────────────────────────────────────────────────────
+ 
+export async function getCurrentUser(): Promise<User> {
+  const { data } = await api.get<User>("/users/me");
+  return data;
+}
+ 
+ 
+export async function changePassword(payload: {
+  current_password: string;
+  new_password: string;
+}): Promise<MessageResponse> {
+  const { data } = await api.put<MessageResponse>(
+    "/users/me/password",
+    payload,
+  );
+  return data;
+}
+ 
+ 

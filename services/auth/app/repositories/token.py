@@ -7,7 +7,7 @@ service layer before calling here.
 """
 
 import logging
-import uuid
+from uuid import UUID
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def create_refresh_token(
     db: AsyncSession,
     *,
-    user_id: uuid.UUID,
+    user_id: UUID,
     token: str,
     expires_days: int = 7,
 ) -> RefreshToken:
@@ -45,3 +45,31 @@ async def get_refresh_token(db: AsyncSession, token: str) -> RefreshToken | None
     """Return the token record matching the SHA-256 hash ``token``, or None."""
     result = await db.execute(select(RefreshToken).where(RefreshToken.token == token))
     return result.scalar_one_or_none()
+
+async def revoke_token(db: AsyncSession, refresh_token: RefreshToken) -> None:
+    """Mark a single token as revoked (logical delete).
+ 
+    The record is kept in the DB so audit trails remain intact.
+    """
+    refresh_token.revoked = True
+    await db.flush()
+    logger.debug("Refresh token id=%s revoked", refresh_token.id)
+
+async def revoke_all_user_tokens(db: AsyncSession, user_id: UUID) -> int:
+    """Revoke every active token belonging to ``user_id``.
+ 
+    Returns the number of tokens revoked.  Used by logout-all and
+    change-password to invalidate all existing sessions.
+    """
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked.is_(False),
+        )
+    )
+    tokens = result.scalars().all()
+    for token in tokens:
+        token.revoked = True
+    await db.flush()
+    logger.info("Revoked %s token(s) for user_id=%s", len(tokens), user_id)
+    return len(tokens)

@@ -56,3 +56,16 @@ async def get_similar_names(db: AsyncSession, normalized_prefix: str) -> list[st
     stmt = select(User.name).where(func.lower(User.name).like(f"{normalized_prefix}%"))
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+async def update_user(db: AsyncSession, user: User, **fields: object) -> User:
+    """Apply ``fields`` to ``user``, flush, and return the refreshed instance.
+ 
+    Only the keyword arguments supplied are updated; omitted fields are left
+    unchanged.  Raises ``AttributeError`` if an unknown field name is passed.
+    """
+    for key, value in fields.items():
+        setattr(user, key, value)
+    await db.flush()
+    await db.refresh(user)
+    return user
+ 

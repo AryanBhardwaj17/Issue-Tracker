@@ -15,6 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import (
     EmailAlreadyRegisteredError,
+    InvalidRefreshTokenError,
+    NameGenerationError,
+    UserUnavailableError
 )
 from app.core.security import (
     create_access_token,
@@ -82,7 +85,7 @@ async def register(
             await db.rollback()
             continue
 
-
+    raise NameGenerationError()
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -134,3 +137,44 @@ async def login(
     tokens = await _issue_tokens(db, user)
     logger.info("User logged in: %s", user.email)
     return user, tokens
+
+async def refresh_tokens(db: AsyncSession, *, refresh_token: str) -> dict:
+    """Rotate a refresh token — revoke the old one and issue a new pair.
+ 
+    Token rotation limits the window of exposure if a refresh token is stolen.
+ 
+    Args:
+        refresh_token: The raw (unhashed) refresh token from the client.
+ 
+    Returns:
+        A new tokens dict with access_token, refresh_token, token_type.
+ 
+    Raises:
+        InvalidRefreshTokenError: If the token is unknown, revoked, or expired.
+        UserUnavailableError: If the owning user no longer exists in the DB.
+    """
+    hashed = hash_refresh_token(refresh_token)
+    record = await token_repo.get_refresh_token(db, hashed)
+ 
+    if not record or record.revoked or record.is_expired:
+        raise InvalidRefreshTokenError()
+ 
+    user = await user_repo.get_user_by_id(db, record.user_id)
+    if not user:
+        raise UserUnavailableError()
+ 
+    await token_repo.revoke_token(db, record)
+    return await _issue_tokens(db, user)
+ 
+ 
+async def logout(db: AsyncSession, *, refresh_token: str) -> None:
+    """Revoke a single refresh token.
+ 
+    Silently ignores unknown or already-revoked tokens so that double-logout
+    does not surface an error to the client.
+    """
+    hashed = hash_refresh_token(refresh_token)
+    record = await token_repo.get_refresh_token(db, hashed)
+    if record and not record.revoked:
+        await token_repo.revoke_token(db, record)
+ 
