@@ -5,8 +5,24 @@ Uses an in-process SQLite (aiosqlite) database so tests run without Docker.
 Each test function gets its own isolated session via the ``db`` fixture.
 """
 
+import os
 import uuid
 from collections.abc import AsyncGenerator
+
+# ── Stub required env vars BEFORE any app module is imported ──────────────────
+# config.py instantiates Settings() at module level; if these vars are absent
+# (e.g. in CI with no .env file) the import chain fails.  Tests don't use JWT
+# verification or RabbitMQ, so dummy values are safe here.
+_TEST_PUBLIC_KEY = (
+    "-----BEGIN PUBLIC KEY-----\n"
+    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0000000000000000000000\n"
+    "0000000000000000000000000000000000000000000000000000000000000000\n"
+    "-----END PUBLIC KEY-----"
+)
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("RSA_PUBLIC_KEY", _TEST_PUBLIC_KEY)
+os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
+os.environ.setdefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 
 import pytest
 import pytest_asyncio
