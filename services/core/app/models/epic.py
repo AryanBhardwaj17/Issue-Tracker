@@ -7,7 +7,7 @@ integer resolved against project_members at query time — no cross-DB FK.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,6 +17,9 @@ class Epic(Base):
     """Persisted epic record."""
 
     __tablename__ = "epics"
+    __table_args__ = (
+        Index("ix_epics_project_deleted", "project_id", "is_deleted"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_id: Mapped[int] = mapped_column(

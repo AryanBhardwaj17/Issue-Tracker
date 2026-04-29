@@ -4,10 +4,9 @@ Task ORM model (unified tasks + subtasks).
 A single table handles both tasks (parent_id IS NULL) and subtasks
 (parent_id IS NOT NULL).  The 2-level nesting limit is enforced in the service
 layer — a row with parent_id set cannot itself be a parent.
-`user_story_id` is always populated, even for subtasks, to simplify queries.
+`story_id` is always populated, even for subtasks, to simplify queries.
 """
 
-import enum
 from datetime import UTC, datetime
 from datetime import date as DateType
 
@@ -32,7 +31,7 @@ class Task(Base):
 
     __tablename__ = "tasks"
     __table_args__ = (
-        Index("ix_tasks_user_story_deleted", "user_story_id", "is_deleted"),
+        Index("ix_tasks_story_deleted", "story_id", "is_deleted"),
         Index("ix_tasks_parent", "parent_id"),
         Index("ix_tasks_assignee", "assignee_id"),
     )
@@ -43,7 +42,7 @@ class Task(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
     )
-    user_story_id: Mapped[int] = mapped_column(
+    story_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("user_stories.id", ondelete="CASCADE"),
         nullable=False,
@@ -56,7 +55,7 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     priority: Mapped[Priority] = mapped_column(
-        Enum(Priority, name="priority"),
+        Enum(Priority, name="priority", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
     assignee_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

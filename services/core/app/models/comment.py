@@ -7,7 +7,7 @@ relative path under /uploads/. Soft-deleted via is_deleted flag.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,13 +17,15 @@ class Comment(Base):
     """Persisted comment record."""
 
     __tablename__ = "comments"
+    __table_args__ = (
+        Index("ix_comments_user_story_deleted", "user_story_id", "is_deleted"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_story_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("user_stories.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     author_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     body: Mapped[str] = mapped_column(String, nullable=False)

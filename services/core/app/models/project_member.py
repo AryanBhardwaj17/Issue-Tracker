@@ -2,7 +2,7 @@
 ProjectMember ORM model.
 
 Links a user (from auth_db) to a project with a role of OWNER or MEMBER.
-`username` is denormalized from auth_db at join time so member lists can be
+`name` is denormalized from auth_db at join time so member lists can be
 served without a cross-service call.
 """
 
@@ -21,7 +21,7 @@ class MemberRole(str, enum.Enum):
 
 
 class ProjectMember(Base):
-    """Project membership record with a denormalized username."""
+    """Project membership record with a denormalized member name."""
 
     __tablename__ = "project_members"
     __table_args__ = (
@@ -35,9 +35,9 @@ class ProjectMember(Base):
         nullable=False,
     )
     user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    username: Mapped[str] = mapped_column(String(50), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[MemberRole] = mapped_column(
-        Enum(MemberRole, name="member_role"),
+        Enum(MemberRole, name="member_role", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
     joined_at: Mapped[datetime] = mapped_column(

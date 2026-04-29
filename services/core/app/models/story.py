@@ -74,13 +74,13 @@ class UserStory(Base):
         nullable=True,
     )
     status: Mapped[StoryStatus] = mapped_column(
-        Enum(StoryStatus, name="story_status"),
+        Enum(StoryStatus, name="story_status", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=StoryStatus.BACKLOG,
         server_default="backlog",
     )
     priority: Mapped[Priority] = mapped_column(
-        Enum(Priority, name="priority"),
+        Enum(Priority, name="priority", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
     story_points: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
