@@ -7,6 +7,7 @@ layer — a row with parent_id set cannot itself be a parent.
 `story_id` is always populated, even for subtasks, to simplify queries.
 """
 
+import uuid
 from datetime import UTC, datetime
 from datetime import date as DateType
 
@@ -17,9 +18,9 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
-    Integer,
     String,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -36,19 +37,19 @@ class Task(Base):
         Index("ix_tasks_assignee", "assignee_id"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    project_id: Mapped[int] = mapped_column(
-        Integer,
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
     )
-    story_id: Mapped[int] = mapped_column(
-        Integer,
+    story_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("user_stories.id", ondelete="CASCADE"),
         nullable=False,
     )
-    parent_id: Mapped[int | None] = mapped_column(
-        Integer,
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=True,
     )
@@ -58,8 +59,8 @@ class Task(Base):
         Enum(Priority, name="priority", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
-    assignee_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    reporter_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    reporter_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     due_date: Mapped[DateType | None] = mapped_column(Date, nullable=True)
     is_done: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"

@@ -7,7 +7,9 @@ Fibonacci-only story_points validation is enforced at the service layer.
 """
 
 import enum
-from datetime import UTC, date as DateType, datetime
+import uuid
+from datetime import UTC, datetime
+from datetime import date as DateType
 
 from sqlalchemy import (
     Boolean,
@@ -17,17 +19,17 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
-    Integer,
     SmallInteger,
     String,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
 
-class StoryStatus(str, enum.Enum):
+class StoryStatus(enum.StrEnum):
     BACKLOG = "backlog"
     TODO = "todo"
     IN_PROGRESS = "in_progress"
@@ -37,7 +39,7 @@ class StoryStatus(str, enum.Enum):
     DONE = "done"
 
 
-class Priority(str, enum.Enum):
+class Priority(enum.StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -59,17 +61,17 @@ class UserStory(Base):
         Index("ix_user_stories_epic", "epic_id"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    project_id: Mapped[int] = mapped_column(
-        Integer,
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
     )
     story_key: Mapped[str] = mapped_column(String(20), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
-    epic_id: Mapped[int | None] = mapped_column(
-        Integer,
+    epic_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("epics.id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -84,8 +86,8 @@ class UserStory(Base):
         nullable=False,
     )
     story_points: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    assignee_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    reporter_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    reporter_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     due_date: Mapped[DateType | None] = mapped_column(Date, nullable=True)
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"

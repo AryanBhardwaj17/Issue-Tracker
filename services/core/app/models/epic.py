@@ -1,13 +1,15 @@
 """
 Epic ORM model.
 
-Groups multiple user stories under a named theme. `reporter_id` is a plain
-integer resolved against project_members at query time — no cross-DB FK.
+Groups multiple user stories under a named theme. `reporter_id` is a UUID
+referenced against project_members at query time — no cross-DB FK.
 """
 
+import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,20 +19,18 @@ class Epic(Base):
     """Persisted epic record."""
 
     __tablename__ = "epics"
-    __table_args__ = (
-        Index("ix_epics_project_deleted", "project_id", "is_deleted"),
-    )
+    __table_args__ = (Index("ix_epics_project_deleted", "project_id", "is_deleted"),)
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    project_id: Mapped[int] = mapped_column(
-        Integer,
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
-    reporter_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    reporter_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )

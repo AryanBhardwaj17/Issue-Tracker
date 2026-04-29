@@ -7,10 +7,12 @@ Provides:
 - ``require_owner``      — asserts the caller is the project owner.
 """
 
+import uuid
 from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +28,7 @@ from app.repositories import project_members as member_repo
 class CurrentUser:
     """Caller identity extracted from the verified JWT payload."""
 
-    id: int
+    id: uuid.UUID
     name: str
     email: str
 
@@ -35,31 +37,30 @@ class CurrentUser:
 class ProjectMembership:
     """Caller's membership record for a specific project."""
 
-    user_id: int
-    project_id: int
+    user_id: uuid.UUID
+    project_id: uuid.UUID
     name: str
     role: Literal["owner", "member"]
 
 
+_bearer = HTTPBearer()
+
+
 async def get_current_user(
-    authorization: str = Header(..., alias="Authorization"),
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> CurrentUser:
     """
     Extract and verify the RS256 JWT from the ``Authorization: Bearer <token>`` header.
 
     Raises 401 on missing, malformed, expired, or tampered tokens.
     """
-    if not authorization.startswith("Bearer "):
-        raise InvalidTokenError()
-
-    token = authorization.removeprefix("Bearer ")
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(credentials.credentials)
     except JWTError:
         raise InvalidTokenError()
 
     try:
-        user_id = int(payload["sub"])
+        user_id = uuid.UUID(payload["sub"])
         name: str = payload["name"]
         email: str = payload["email"]
     except (KeyError, ValueError):
@@ -69,7 +70,7 @@ async def get_current_user(
 
 
 async def require_member(
-    project_id: int,
+    project_id: uuid.UUID,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProjectMembership:

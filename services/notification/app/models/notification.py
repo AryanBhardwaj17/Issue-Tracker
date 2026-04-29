@@ -6,6 +6,7 @@ Notification is the in-app read/unread inbox per user.
 """
 
 import enum
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
@@ -13,11 +14,11 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Index,
-    Integer,
     JSON,
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -38,7 +39,9 @@ class EmailDelivery(Base):
         Index("ix_email_deliveries_created_at", "created_at"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -71,8 +74,10 @@ class Notification(Base):
         Index("ix_notifications_user_read_created", "user_id", "is_read", "created_at"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
@@ -88,3 +93,4 @@ class Notification(Base):
 
     def __repr__(self) -> str:
         return f"<Notification id={self.id} user_id={self.user_id} is_read={self.is_read}>"
+

@@ -58,6 +58,7 @@ class ProjectNotFoundError(AppException):
     status_code = 404
     detail = ERR_PROJECT_NOT_FOUND
 
+
 # ── 400 Bad Request ───────────────────────────────────────────────────────────────
 
 

@@ -31,7 +31,7 @@ class Base(AsyncAttrs, DeclarativeBase):
     """Shared declarative base for all Core Service ORM models."""
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that yields an async database session."""
     async with AsyncSessionLocal() as session:
         yield session

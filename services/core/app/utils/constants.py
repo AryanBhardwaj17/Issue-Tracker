@@ -18,8 +18,8 @@ PROJECT_DESCRIPTION_MAX_LENGTH = 10_000
 PROJECT_KEY_MAX_LENGTH = 20
 
 # ── Project key generation ────────────────────────────────────────────────────
-MAX_KEY_RETRIES = 50          # attempts before KeyGenerationError is raised
-KEY_BASE_MAX_LETTERS = 4      # take first N alpha chars for the key base
+MAX_KEY_RETRIES = 50  # attempts before KeyGenerationError is raised
+KEY_BASE_MAX_LETTERS = 4  # take first N alpha chars for the key base
 
 # ── Story validation ──────────────────────────────────────────────────────────
 STORY_TITLE_MAX_LENGTH = 500
@@ -27,7 +27,7 @@ FIBONACCI_POINTS = frozenset({1, 2, 3, 5, 8, 13, 21})
 
 # ── Task / subtask ────────────────────────────────────────────────────────────
 TASK_TITLE_MAX_LENGTH = 500
-MAX_TASK_DEPTH = 2            # tasks (depth 1) + subtasks (depth 2) only
+MAX_TASK_DEPTH = 2  # tasks (depth 1) + subtasks (depth 2) only
 
 # ── Comment ───────────────────────────────────────────────────────────────────
 COMMENT_BODY_MIN_LENGTH = 1
