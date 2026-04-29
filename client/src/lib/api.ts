@@ -29,3 +29,11 @@ export async function registerUser(payload: {
   const { data } = await api.post<AuthResponse>("/auth/signup", payload);
   return data;
 }
+
+export async function loginUser(payload: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>("/auth/login", payload);
+  return data;
+}

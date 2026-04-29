@@ -21,6 +21,7 @@ from app.core.security import (
     generate_refresh_token,
     hash_password,
     hash_refresh_token,
+    verify_password
 )
 from app.models.user import User
 from app.repositories import token as token_repo
@@ -107,3 +108,29 @@ async def _issue_tokens(db: AsyncSession, user: User) -> dict[str, str]:
         "refresh_token": raw_refresh,
         "token_type": TOKEN_TYPE_BEARER,
     }
+
+
+async def login(
+    db: AsyncSession,
+    *,
+    email: str,
+    password: str,
+) -> tuple[User, dict]:
+    """Authenticate a user by email and password, then issue a token pair.
+ 
+    Returns:
+        A (User, tokens) tuple on success.
+ 
+    Raises:
+        InvalidCredentialsError: If the email does not exist or the
+            password does not match.
+    """
+    from app.core.exceptions import InvalidCredentialsError
+ 
+    user = await user_repo.get_user_by_email(db, email)
+    if not user or not verify_password(password, user.password_hash):
+        raise InvalidCredentialsError()
+ 
+    tokens = await _issue_tokens(db, user)
+    logger.info("User logged in: %s", user.email)
+    return user, tokens

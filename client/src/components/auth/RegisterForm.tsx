@@ -24,11 +24,18 @@ export default function RegisterForm() {
     if (name.trim().length < 1) {
       errors.name = "Name is required";
     }
- 
+
+    const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,128}$/;
+
+
     if (password.length < 8) {
       errors.password = "Password must be at least 8 characters";
     } else if (password.length > 128) {
       errors.password = "Password must be at most 128 characters";
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      errors.password = "Password must contain at least one uppercase letter and one number";
     }
  
     setFieldErrors(errors);
