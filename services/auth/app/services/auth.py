@@ -98,6 +98,7 @@ async def _issue_tokens(db: AsyncSession, user: User) -> dict[str, str]:
     """
     access_token = create_access_token(
         subject=str(user.id),
+        extra_claims={"name": user.name, "email": user.email},
     )
     raw_refresh = generate_refresh_token()
     await token_repo.create_refresh_token(
