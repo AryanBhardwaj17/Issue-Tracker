@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   registerUser,
   loginUser,
+  logoutUser,
   type User,
 } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errors";
@@ -14,6 +15,7 @@ interface AuthState {
 
   register: (name: string, email: string, password: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<Boolean>;
+  logout: () => Promise<void>;
   hydrate: () => Promise<void>;
   clearError: () => void;
 }
@@ -50,6 +52,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+
+  logout: async () => {
+    try {
+      await logoutUser();
+    } catch {
+      // Proceed even if server logout fails
+    } finally {
+      sessionStorage.removeItem("access_token");
+      sessionStorage.removeItem("user");
+      set({ user: null, error: null });
+    }
+  },
 
   hydrate: async () => {
     const token = sessionStorage.getItem("access_token");
