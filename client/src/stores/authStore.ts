@@ -14,7 +14,7 @@ interface AuthState {
   error: string | null;
 
   register: (name: string, email: string, password: string) => Promise<boolean>;
-  login: (email: string, password: string) => Promise<Boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
   clearError: () => void;
