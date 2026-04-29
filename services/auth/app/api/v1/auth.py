@@ -8,21 +8,16 @@ while non-browser clients (mobile, CLI) can read the body.
 
 import logging
 
-from fastapi import APIRouter, Depends, Response , Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import InvalidRefreshTokenError
-from app.schemas.auth import (
-    AuthResponse,
-    RegisterRequest,
-    AccessTokenResponse,
-    LoginRequest
-)
+from app.schemas.auth import AccessTokenResponse, AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.common import MessageResponse
 from app.services import auth as auth_service
-from app.utils.constants import AUTH_COOKIE_PATH, REFRESH_TOKEN_COOKIE, ERR_REFRESH_TOKEN_REQUIRED
+from app.utils.constants import AUTH_COOKIE_PATH, ERR_REFRESH_TOKEN_REQUIRED, REFRESH_TOKEN_COOKIE
 
 logger = logging.getLogger(__name__)
 

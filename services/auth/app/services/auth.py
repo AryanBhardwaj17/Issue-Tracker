@@ -17,14 +17,14 @@ from app.core.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidRefreshTokenError,
     NameGenerationError,
-    UserUnavailableError
+    UserUnavailableError,
 )
 from app.core.security import (
     create_access_token,
     generate_refresh_token,
     hash_password,
     hash_refresh_token,
-    verify_password
+    verify_password,
 )
 from app.models.user import User
 from app.repositories import token as token_repo

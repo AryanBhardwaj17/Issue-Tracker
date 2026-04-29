@@ -1,0 +1,136 @@
+stages:
+  - lint
+  - test
+
+# ── LINT ──────────────────────────────────────────────────────────────────────
+
+lint:auth:
+  stage: lint
+  image: python:3.13-slim
+  script:
+    - pip install ruff
+    - ruff check --fix services/auth/app
+    - ruff check services/auth/app
+  rules:
+    - changes:
+        - services/auth/**/*
+
+lint:core:
+  stage: lint
+  image: python:3.13-slim
+  script:
+    - pip install ruff
+    - ruff check --fix services/core/app
+    - ruff check services/core/app
+  rules:
+    - changes:
+        - services/core/**/*
+
+lint:notification:
+  stage: lint
+  image: python:3.13-slim
+  script:
+    - pip install ruff
+    - ruff check --fix services/notification/app
+    - ruff check services/notification/app
+  rules:
+    - changes:
+        - services/notification/**/*
+
+lint:client:
+  stage: lint
+  image: node:20-alpine
+  cache:
+    key: client-$CI_COMMIT_REF_SLUG
+    paths:
+      - client/node_modules/
+  script:
+    - cd client && npm ci && npm run lint
+  rules:
+    - changes:
+        - client/**/*
+
+# ── TEST ──────────────────────────────────────────────────────────────────────
+
+test:auth:
+  stage: test
+  image: python:3.13-slim
+  services:
+    - name: postgres:16-alpine
+      alias: auth-db
+  variables:
+    POSTGRES_USER: auth_user
+    POSTGRES_PASSWORD: auth_pass
+    POSTGRES_DB: auth_db
+    DATABASE_URL: postgresql+asyncpg://auth_user:auth_pass@auth-db:5432/auth_db
+  script:
+    - apt-get update -qq && apt-get install -y -qq openssl > /dev/null 2>&1
+    - openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out /tmp/private.pem 2>/dev/null
+    - openssl rsa -in /tmp/private.pem -pubout -out /tmp/public.pem 2>/dev/null
+    - export RSA_PRIVATE_KEY="$(cat /tmp/private.pem)"
+    - export RSA_PUBLIC_KEY="$(cat /tmp/public.pem)"
+    - cd services/auth
+    - pip install ".[dev]"
+    - pytest tests/ -v
+  rules:
+    - changes:
+        - services/auth/**/*
+        - .gitlab-ci.yml
+
+test:core:
+  stage: test
+  image: python:3.13-slim
+  services:
+    - name: postgres:16-alpine
+      alias: core-db
+  variables:
+    POSTGRES_USER: core_user
+    POSTGRES_PASSWORD: core_pass
+    POSTGRES_DB: core_db
+    DATABASE_URL: postgresql+asyncpg://core_user:core_pass@core-db:5432/core_db
+  script:
+    - cd services/core
+    - |
+      if [ ! -s pyproject.toml ]; then
+        echo "pyproject.toml is empty — skipping tests"
+        exit 0
+      fi
+    - pip install ".[dev]"
+    - |
+      if find tests/ -name "test_*.py" | grep -q .; then
+        pytest tests/ -v
+      else
+        echo "No test files found — skipping"
+      fi
+  rules:
+    - changes:
+        - services/core/**/*
+
+test:notification:
+  stage: test
+  image: python:3.13-slim
+  services:
+    - name: postgres:16-alpine
+      alias: notification-db
+  variables:
+    POSTGRES_USER: notification_user
+    POSTGRES_PASSWORD: notification_pass
+    POSTGRES_DB: notification_db
+    DATABASE_URL: postgresql+asyncpg://notification_user:notification_pass@notification-db:5432/notification_db
+  script:
+    - cd services/notification
+    - |
+      if [ ! -s pyproject.toml ]; then
+        echo "pyproject.toml is empty — skipping tests"
+        exit 0
+      fi
+    - pip install ".[dev]"
+    - |
+      if find tests/ -name "test_*.py" | grep -q .; then
+        pytest tests/ -v
+      else
+        echo "No test files found — skipping"
+      fi
+  rules:
+    - changes:
+        - services/notification/**/*

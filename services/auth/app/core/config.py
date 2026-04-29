@@ -6,8 +6,9 @@ All configuration values are defined here and accessed via the module-level
 directly — always import from this module.
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     """Pydantic-settings model that reads from the environment or a .env file.
