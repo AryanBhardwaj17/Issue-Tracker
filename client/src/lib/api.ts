@@ -69,9 +69,9 @@ export async function changePassword(payload: {
   return data;
 }
 
-// ─── Project Types ───────────────────────────────────────────────────────────
+// ─── Envelope Types ──────────────────────────────────────────────────────────
 
-export interface Pagination {
+export interface PaginationMeta {
   page: number;
   pageSize: number;
   total: number;
@@ -80,29 +80,14 @@ export interface Pagination {
 
 export interface Envelope<T> {
   success: boolean;
-  message?: string;
+  message: string;
   data: T;
-  pagination?: Pagination;
+  pagination?: PaginationMeta;
 }
 
-export interface OwnerOut {
-  id: string;
-  name: string;
-}
+// ─── Project Types ───────────────────────────────────────────────────────────
 
-export interface ProjectOut {
-  id: string;
-  name: string;
-  key: string;
-  description: string | null;
-  owner: OwnerOut;
-  role: "owner" | "member";
-  memberCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ProjectListItem {
+export interface Project {
   id: string;
   name: string;
   key: string;
@@ -110,88 +95,92 @@ export interface ProjectListItem {
   role: "owner" | "member";
   memberCount: number;
   createdAt: string;
+}
+
+export interface ProjectOwner {
+  id: string;
+  name: string;
+}
+
+export interface ProjectDetail extends Project {
+  owner: ProjectOwner;
   updatedAt: string;
 }
 
-export interface ProjectMember {
-  id: string;
-  userId: string;
-  name: string;
-  role: "owner" | "member";
-  joinedAt: string;
+export interface PaginatedResult<T> {
+  items: T[];
+  pagination: PaginationMeta;
 }
 
 // ─── Project API ─────────────────────────────────────────────────────────────
 
-export async function getProject(projectId: string): Promise<ProjectOut> {
-  const { data } = await api.get<Envelope<ProjectOut>>(`/core/projects/${projectId}`);
+export async function listProjects(
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Project>> {
+  const { data } = await api.get<Envelope<Project[]>>("/projects", {
+    params: { page, pageSize },
+  });
+  return {
+    items: data.data,
+    pagination: data.pagination!,
+  };
+}
+
+export async function getProject(id: string): Promise<ProjectDetail> {
+  const { data } = await api.get<Envelope<ProjectDetail>>(`/projects/${id}`);
+  return data.data;
+}
+
+export async function createProject(body: {
+  name: string;
+  description?: string | null;
+}): Promise<ProjectDetail> {
+  const { data } = await api.post<Envelope<ProjectDetail>>("/projects", body);
   return data.data;
 }
 
 export async function updateProject(
-  projectId: string,
-  body: { name?: string; description?: string },
-): Promise<ProjectOut> {
-  const { data } = await api.patch<Envelope<ProjectOut>>(`/core/projects/${projectId}`, body);
+  id: string,
+  body: { name?: string; description?: string | null },
+): Promise<ProjectDetail> {
+  const { data } = await api.patch<Envelope<ProjectDetail>>(
+    `/projects/${id}`,
+    body,
+  );
   return data.data;
 }
 
-export async function deleteProject(projectId: string): Promise<void> {
-  await api.delete(`/core/projects/${projectId}`);
+export async function deleteProject(id: string): Promise<void> {
+  await api.delete(`/projects/${id}`);
 }
 
-// ─── Members API (mocked until backend ready) ────────────────────────────────
+// ─── Member Types ─────────────────────────────────────────────────────────────
 
-const MOCK_MEMBERS = true;
-
-const MOCK_MEMBERS_DATA: ProjectMember[] = [
-  { id: "m1", userId: "u1", name: "Alice Johnson", role: "owner", joinedAt: "2025-12-01T10:00:00Z" },
-  { id: "m2", userId: "u2", name: "Bob Smith", role: "member", joinedAt: "2026-01-15T08:30:00Z" },
-  { id: "m3", userId: "u3", name: "Carol White", role: "member", joinedAt: "2026-02-20T14:00:00Z" },
-];
-
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+export interface MemberOut {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: "owner" | "member";
+  joinedAt: string;
 }
 
-export async function listMembers(
-  projectId: string,
-  page = 1,
-  pageSize = 10,
-): Promise<{ data: ProjectMember[]; pagination: Pagination }> {
-  if (MOCK_MEMBERS) {
-    await delay(300);
-    return {
-      data: MOCK_MEMBERS_DATA,
-      pagination: { page, pageSize, total: MOCK_MEMBERS_DATA.length, totalPages: 1 },
-    };
-  }
-  const { data } = await api.get<Envelope<ProjectMember[]>>(
-    `/core/projects/${projectId}/members?page=${page}&pageSize=${pageSize}`,
+// ─── Members API ─────────────────────────────────────────────────────────────
+
+export async function listMembers(projectId: string): Promise<MemberOut[]> {
+  const { data } = await api.get<Envelope<MemberOut[]>>(
+    `/projects/${projectId}/members`,
   );
-  return { data: data.data, pagination: data.pagination! };
+  return data.data;
 }
 
 export async function addMember(
   projectId: string,
   email: string,
-): Promise<ProjectMember> {
-  if (MOCK_MEMBERS) {
-    await delay(400);
-    if (email === "notfound@test.com") throw { response: { status: 404, data: { message: "No user with that email" } } };
-    if (email === "existing@test.com") throw { response: { status: 409, data: { message: "Already a member" } } };
-    const newMember: ProjectMember = {
-      id: `m${Date.now()}`,
-      userId: `u${Date.now()}`,
-      name: email.split("@")[0],
-      role: "member",
-      joinedAt: new Date().toISOString(),
-    };
-    MOCK_MEMBERS_DATA.push(newMember);
-    return newMember;
-  }
-  const { data } = await api.post<Envelope<ProjectMember>>(
-    `/core/projects/${projectId}/members`,
+): Promise<MemberOut> {
+  const { data } = await api.post<Envelope<MemberOut>>(
+    `/projects/${projectId}/members`,
     { email },
   );
   return data.data;
@@ -201,11 +190,5 @@ export async function transferOwnership(
   projectId: string,
   newOwnerId: string,
 ): Promise<void> {
-  if (MOCK_MEMBERS) {
-    await delay(400);
-    return;
-  }
-  await api.patch(`/core/projects/${projectId}/transfer-ownership`, { newOwnerId });
+  await api.post(`/projects/${projectId}/transfer-ownership`, { newOwnerId });
 }
- 
- 

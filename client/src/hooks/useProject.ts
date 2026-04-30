@@ -18,10 +18,10 @@ export function useProject(projectId: string) {
   });
 }
 
-export function useProjectMembers(projectId: string, page = 1) {
+export function useProjectMembers(projectId: string) {
   return useQuery({
-    queryKey: ["projectMembers", projectId, page],
-    queryFn: () => listMembers(projectId, page),
+    queryKey: ["projectMembers", projectId],
+    queryFn: () => listMembers(projectId),
     enabled: !!projectId,
   });
 }

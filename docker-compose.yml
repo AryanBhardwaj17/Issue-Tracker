@@ -18,6 +18,23 @@ services:
       timeout: 5s
       retries: 5
 
+  core-db:
+    image: postgres:16-alpine
+    container_name: core-db
+    environment:
+      POSTGRES_USER: ${CORE_DB_USER}
+      POSTGRES_PASSWORD: ${CORE_DB_PASS}
+      POSTGRES_DB: ${CORE_DB_NAME}
+    volumes:
+      - core-db-data:/var/lib/postgresql/data
+    networks:
+      - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER} -d ${CORE_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -44,22 +61,47 @@ services:
       DATABASE_URL: postgresql+asyncpg://${AUTH_DB_USER}:${AUTH_DB_PASS}@auth-db:5432/${AUTH_DB_NAME}
       RSA_PRIVATE_KEY: ${RSA_PRIVATE_KEY}
       RSA_PUBLIC_KEY: ${RSA_PUBLIC_KEY}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      GRPC_PORT: "50051"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       auth-db:
         condition: service_healthy
     networks:
       - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
-  # core-service:
-  #   image: ${IMAGE_CORE}
-  #   container_name: core-service
-  #   environment:
-  #     DATABASE_URL: postgresql+asyncpg://${CORE_DB_USER}:${CORE_DB_PASS}@core-db:5432/${CORE_DB_NAME}
-  #   depends_on:
-  #     core-db:
-  #       condition: service_healthy
-  #   networks:
-  #     - issue-tracker-net
+  core-service:
+    image: ${IMAGE_CORE}
+    container_name: core-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${CORE_DB_USER}:${CORE_DB_PASS}@core-db:5432/${CORE_DB_NAME}
+      RSA_PUBLIC_KEY: ${RSA_PUBLIC_KEY}
+      AUTH_SERVICE_GRPC_HOST: auth-service:50051
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: json
+    depends_on:
+      core-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # notification-service:
   #   image: ${IMAGE_NOTIFICATION}
@@ -81,7 +123,10 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - auth-service
+      auth-service:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
     networks:
       - issue-tracker-net
 
@@ -99,6 +144,7 @@ services:
 
 volumes:
   auth-db-data:
+  core-db-data:
   rabbitmq_data:
 
 # ── Networks ──────────────────────────────────────────────────────────────────

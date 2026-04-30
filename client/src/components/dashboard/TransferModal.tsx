@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { useTransferOwnership } from "@/hooks/useProject";
-import type { ProjectMember } from "@/lib/api";
+import type { MemberOut } from "@/lib/api";
 
 interface TransferModalProps {
   projectId: string;
-  members: ProjectMember[];
+  members: MemberOut[];
   currentUserId: string;
   onClose: () => void;
 }

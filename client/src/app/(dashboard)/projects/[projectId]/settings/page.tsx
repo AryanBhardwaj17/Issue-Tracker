@@ -30,11 +30,19 @@ export default function ProjectSettingsPage() {
 
   const user = useAuthStore((s) => s.user);
   const isOwner = project?.role === "owner";
-  const members = membersData?.data ?? [];
+  const members = membersData ?? [];
 
   function handleUpdateProject(e: React.FormEvent) {
     e.preventDefault();
-    updateMutation.mutate({ name: name.trim(), description: description.trim() || undefined });
+    updateMutation.mutate(
+      { name: name.trim(), description: description.trim() || undefined },
+      {
+        onSuccess: () => {
+          setName("");
+          setDescription("");
+        },
+      },
+    );
   }
 
   function handleAddMember(e: React.FormEvent) {

@@ -38,6 +38,7 @@ class ProjectMember(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     role: Mapped[MemberRole] = mapped_column(
         Enum(MemberRole, name="member_role", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,

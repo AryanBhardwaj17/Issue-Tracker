@@ -9,8 +9,9 @@ lint:auth:
   image: python:3.13-slim
   script:
     - pip install ruff
-    - ruff check --fix services/auth/app
-    - ruff check services/auth/app
+    - cd services/auth
+    - ruff check --fix app
+    - ruff check app
   rules:
     - changes:
         - services/auth/**/*
@@ -20,8 +21,9 @@ lint:core:
   image: python:3.13-slim
   script:
     - pip install ruff
-    - ruff check --fix services/core/app
-    - ruff check services/core/app
+    - cd services/core
+    - ruff check --fix app
+    - ruff check app
   rules:
     - changes:
         - services/core/**/*
@@ -31,8 +33,9 @@ lint:notification:
   image: python:3.13-slim
   script:
     - pip install ruff
-    - ruff check --fix services/notification/app
-    - ruff check services/notification/app
+    - cd services/notification
+    - ruff check --fix app
+    - ruff check app
   rules:
     - changes:
         - services/notification/**/*
