@@ -192,3 +192,69 @@ export async function transferOwnership(
 ): Promise<void> {
   await api.post(`/projects/${projectId}/transfer-ownership`, { newOwnerId });
 }
+
+// ─── Epic Types ───────────────────────────────────────────────────────────────
+
+export interface EpicReporter {
+  id: string;
+  name: string;
+}
+
+export interface EpicProgress {
+  total: number;
+  done: number;
+}
+
+export interface Epic {
+  id: string;
+  name: string;
+  description: string | null;
+  reporter: EpicReporter;
+  progress: EpicProgress;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Epic API ─────────────────────────────────────────────────────────────────
+
+export async function listEpics(
+  projectId: string,
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Epic>> {
+  const { data } = await api.get<Envelope<Epic[]>>(
+    `/projects/${projectId}/epics`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createEpic(
+  projectId: string,
+  body: { name: string; description?: string | null },
+): Promise<Epic> {
+  const { data } = await api.post<Envelope<Epic>>(
+    `/projects/${projectId}/epics`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateEpic(
+  projectId: string,
+  epicId: string,
+  body: { name?: string; description?: string | null },
+): Promise<Epic> {
+  const { data } = await api.patch<Envelope<Epic>>(
+    `/projects/${projectId}/epics/${epicId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteEpic(
+  projectId: string,
+  epicId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/epics/${epicId}`);
+}
