@@ -8,6 +8,7 @@ Each test function gets its own isolated session via the ``db`` fixture.
 import os
 import uuid
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock
 
 # ── Stub required env vars BEFORE any app module is imported ──────────────────
 # config.py instantiates Settings() at module level; if these vars are absent
@@ -23,6 +24,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("RSA_PUBLIC_KEY", _TEST_PUBLIC_KEY)
 os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
 os.environ.setdefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+os.environ.setdefault("AUTH_SERVICE_GRPC_HOST", "localhost:50051")
 
 import pytest
 import pytest_asyncio
@@ -30,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.deps import CurrentUser, ProjectMembership
 from app.core.database import Base
+from app.grpc.client import AuthGrpcClient
 
 # ── In-memory async SQLite engine ─────────────────────────────────────────────
 
@@ -82,3 +85,19 @@ def user_bob() -> CurrentUser:
         name="Bob",
         email="bob@example.com",
     )
+
+
+@pytest.fixture
+def user_charlie() -> CurrentUser:
+    return CurrentUser(
+        id=uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+        name="Charlie",
+        email="charlie@example.com",
+    )
+
+
+@pytest.fixture
+def grpc_client_mock() -> AuthGrpcClient:
+    """Return a mock AuthGrpcClient with async stubs."""
+    mock = AsyncMock(spec=AuthGrpcClient)
+    return mock

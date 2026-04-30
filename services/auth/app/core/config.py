@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # ── gRPC ──────────────────────────────────────────────────────────────────
+    GRPC_PORT: int = 50051
+    INTERNAL_API_KEY: str = ""  # shared secret for service-to-service gRPC auth
+
     # ── Application ───────────────────────────────────────────────────────────
     APP_NAME: str = "auth-service"
     DEBUG: bool = False

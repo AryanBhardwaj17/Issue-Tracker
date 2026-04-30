@@ -9,11 +9,13 @@ source of truth — so they never diverge between exceptions and API responses.
 """
 
 from app.utils.constants import (
+    ERR_ALREADY_MEMBER,
     ERR_AUTH_SERVICE_UNAVAILABLE,
     ERR_INVALID_TOKEN,
     ERR_KEY_GENERATION_FAILED,
     ERR_NOT_A_MEMBER,
     ERR_PROJECT_NOT_FOUND,
+    ERR_USER_NOT_FOUND,
 )
 
 
@@ -79,11 +81,22 @@ class KeyGenerationError(AppException):
     detail = ERR_KEY_GENERATION_FAILED
 
 
-# ── 503 Service Unavailable ───────────────────────────────────────────────────────
+class AlreadyMemberError(AppException):
+    """Raised when a user is already a member of the project."""
+
+    status_code = 409
+    detail = ERR_ALREADY_MEMBER
+
+
+class UserNotFoundError(AppException):
+    """Raised when a user lookup returns no result."""
+
+    status_code = 404
+    detail = ERR_USER_NOT_FOUND
 
 
 class AuthServiceUnavailableError(AppException):
-    """Raised when the Auth service cannot be reached."""
+    """Raised when the Auth gRPC service cannot be reached."""
 
     status_code = 503
     detail = ERR_AUTH_SERVICE_UNAVAILABLE
