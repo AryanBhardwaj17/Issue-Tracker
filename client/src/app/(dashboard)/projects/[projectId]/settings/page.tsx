@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { z } from "zod";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
@@ -23,21 +23,14 @@ export default function ProjectSettingsPage() {
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(project?.name ?? "");
+  const [description, setDescription] = useState(project?.description ?? "");
   const [showTransfer, setShowTransfer] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
   const user = useAuthStore((s) => s.user);
   const isOwner = project?.role === "owner";
   const members = membersData?.data ?? [];
-
-  useEffect(() => {
-    if (project) {
-      setName(project.name);
-      setDescription(project.description ?? "");
-    }
-  }, [project]);
 
   function handleUpdateProject(e: React.FormEvent) {
     e.preventDefault();
