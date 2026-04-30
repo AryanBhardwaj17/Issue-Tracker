@@ -154,3 +154,41 @@ export async function updateProject(
 export async function deleteProject(id: string): Promise<void> {
   await api.delete(`/projects/${id}`);
 }
+
+// ─── Member Types ─────────────────────────────────────────────────────────────
+
+export interface MemberOut {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: "owner" | "member";
+  joinedAt: string;
+}
+
+// ─── Members API ─────────────────────────────────────────────────────────────
+
+export async function listMembers(projectId: string): Promise<MemberOut[]> {
+  const { data } = await api.get<Envelope<MemberOut[]>>(
+    `/projects/${projectId}/members`,
+  );
+  return data.data;
+}
+
+export async function addMember(
+  projectId: string,
+  email: string,
+): Promise<MemberOut> {
+  const { data } = await api.post<Envelope<MemberOut>>(
+    `/projects/${projectId}/members`,
+    { email },
+  );
+  return data.data;
+}
+
+export async function transferOwnership(
+  projectId: string,
+  newOwnerId: string,
+): Promise<void> {
+  await api.post(`/projects/${projectId}/transfer-ownership`, { newOwnerId });
+}
