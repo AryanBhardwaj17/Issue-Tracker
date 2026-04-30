@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError, InvalidTokenError, ProjectNotFoundError
 from app.core.security import decode_access_token
+from app.grpc.client import AuthGrpcClient
 from app.models.project_member import MemberRole
 from app.repositories import project as project_repo
 from app.repositories import project_members as member_repo
@@ -107,3 +108,11 @@ async def require_owner(
     if membership.role != MemberRole.OWNER.value:
         raise ForbiddenError("Owner only")
     return membership
+
+
+def get_grpc_client() -> AuthGrpcClient:
+    """FastAPI dependency — returns the singleton gRPC client initialised in main.py."""
+    from app.main import _grpc_client  # deferred import to avoid circular dependency
+
+    assert _grpc_client is not None, "gRPC client not initialised"
+    return _grpc_client

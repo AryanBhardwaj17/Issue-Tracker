@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.exceptions import AppException
 from app.core.logging import configure_logging
+from app.grpc.server import start_grpc_server, stop_grpc_server
 from app.utils.constants import ERR_EMAIL_REGISTERED, ERR_NAME_GENERATION_FAILED
 
 logger = logging.getLogger(__name__)
@@ -37,8 +38,11 @@ async def lifespan(_app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
+    await start_grpc_server()
+
     yield
 
+    await stop_grpc_server()
     await engine.dispose()
     logger.info("Shut down %s", settings.APP_NAME)
 

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package issue_tracker.auth;
+
+option java_multiple_files = true;
+
+// Internal gRPC service exposed by Auth on port 50051.
+// Authenticated via x-internal-api-key metadata.
+// NOT routed through Nginx — Docker internal network only.
+
+service UserLookup {
+  // Resolve a single user by email address.
+  rpc GetUserByEmail (GetUserByEmailRequest) returns (UserResponse);
+
+  // Batch-resolve users by their IDs.
+  rpc GetUsersByIds (GetUsersByIdsRequest) returns (UsersResponse);
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUsersByIdsRequest {
+  repeated string ids = 1;  // UUIDs serialised as strings
+}
+
+message UserResponse {
+  string id = 1;     // UUID as string
+  string name = 2;
+  string email = 3;
+  bool found = 4;
+}
+
+message UserInfo {
+  string id = 1;     // UUID as string
+  string name = 2;
+  string email = 3;
+}
+
+message UsersResponse {
+  repeated UserInfo users = 1;
+}

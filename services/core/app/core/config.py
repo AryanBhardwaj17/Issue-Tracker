@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "RS256"
 
     # ── Cross-service ─────────────────────────────────────────────────────────
-    AUTH_SERVICE_URL: str = "http://auth-service:8000"
+    AUTH_SERVICE_GRPC_HOST: str = "auth-service:50051"
     INTERNAL_API_KEY: str
 
     # ── Message bus ───────────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "core-service"
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"  # "json" for production, "text" for local dev
 
     @field_validator("RSA_PUBLIC_KEY", mode="before")
     @classmethod

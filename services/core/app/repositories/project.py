@@ -53,12 +53,14 @@ async def add_owner_member(
     project_id: uuid.UUID,
     user_id: uuid.UUID,
     name: str,
+    email: str = "",
 ) -> ProjectMember:
     """Insert the initial owner row for a newly created project."""
     member = ProjectMember(
         project_id=project_id,
         user_id=user_id,
         name=name,
+        email=email,
         role=MemberRole.OWNER,
     )
     db.add(member)
@@ -180,3 +182,23 @@ async def count_by_key_prefix(db: AsyncSession, base: str) -> int:
     """
     result = await db.execute(select(func.count()).where(Project.key.like(f"{base}%")))
     return result.scalar_one()
+
+
+async def get_for_update(db: AsyncSession, project_id: uuid.UUID) -> Project | None:
+    """Return the project row with a FOR UPDATE lock (serialises concurrent transfers).
+
+    FOR UPDATE is silently ignored on SQLite, which is fine for tests.
+    """
+    result = await db.execute(
+        select(Project)
+        .where(Project.id == project_id, Project.is_deleted.is_(False))
+        .with_for_update()
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_owner(db: AsyncSession, project_id: uuid.UUID, new_owner_id: uuid.UUID) -> None:
+    """Set the owner_id on the project row."""
+    await db.execute(
+        update(Project).where(Project.id == project_id).values(owner_id=new_owner_id)
+    )

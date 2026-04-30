@@ -15,6 +15,9 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
     "uvicorn[standard]>=0.34.0",
+    "grpcio>=1.62.0",
+    "grpcio-tools>=1.62.0",
+    "grpcio-health-checking>=1.62.0",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +34,7 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 100
+exclude = ["app/generated"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]

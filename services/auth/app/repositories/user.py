@@ -57,6 +57,14 @@ async def get_similar_names(db: AsyncSession, normalized_prefix: str) -> list[st
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
+async def get_users_by_ids(db: AsyncSession, user_ids: list[uuid.UUID]) -> list[User]:
+    """Return users whose ids are in ``user_ids``.  Missing ids are silently skipped."""
+    if not user_ids:
+        return []
+    result = await db.execute(select(User).where(User.id.in_(user_ids)))
+    return list(result.scalars().all())
+
+
 async def update_user(db: AsyncSession, user: User, **fields: object) -> User:
     """Apply ``fields`` to ``user``, flush, and return the refreshed instance.
  

@@ -10,6 +10,7 @@ All DB I/O is delegated to ``repositories.project`` and
 ``repositories.project_members``.
 """
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime
@@ -32,6 +33,8 @@ from app.utils.constants import (
     MAX_KEY_RETRIES,
     MAX_PAGE_SIZE,
 )
+
+logger = logging.getLogger(__name__)
 
 # ── Key generation ────────────────────────────────────────────────────────────
 
@@ -119,10 +122,15 @@ async def create_project(
                 db, name=name, key=key, description=description, owner_id=user.id
             )
             await project_repo.add_owner_member(
-                db, project_id=project.id, user_id=user.id, name=user.name
+                db, project_id=project.id, user_id=user.id, name=user.name, email=user.email
             )
             await db.commit()
             await db.refresh(project)
+
+            logger.info(
+                "Project created: id=%s key=%s by user=%s",
+                project.id, project.key, user.id,
+            )
 
             return _to_project_out(
                 project,
@@ -132,8 +140,10 @@ async def create_project(
             )
         except IntegrityError:
             await db.rollback()
+            logger.warning("Key collision for base=%s, retrying", base)
             continue
 
+    logger.error("Key generation exhausted for project name=%r user=%s", name, user.id)
     raise KeyGenerationError()
 
 
