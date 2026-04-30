@@ -68,5 +68,89 @@ export async function changePassword(payload: {
   );
   return data;
 }
- 
- 
+
+// ─── Envelope Types ──────────────────────────────────────────────────────────
+
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface Envelope<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  pagination?: PaginationMeta;
+}
+
+// ─── Project Types ───────────────────────────────────────────────────────────
+
+export interface Project {
+  id: string;
+  name: string;
+  key: string;
+  description: string | null;
+  role: "owner" | "member";
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface ProjectOwner {
+  id: string;
+  name: string;
+}
+
+export interface ProjectDetail extends Project {
+  owner: ProjectOwner;
+  updatedAt: string;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
+// ─── Project API ─────────────────────────────────────────────────────────────
+
+export async function listProjects(
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Project>> {
+  const { data } = await api.get<Envelope<Project[]>>("/projects", {
+    params: { page, pageSize },
+  });
+  return {
+    items: data.data,
+    pagination: data.pagination!,
+  };
+}
+
+export async function getProject(id: string): Promise<ProjectDetail> {
+  const { data } = await api.get<Envelope<ProjectDetail>>(`/projects/${id}`);
+  return data.data;
+}
+
+export async function createProject(body: {
+  name: string;
+  description?: string | null;
+}): Promise<ProjectDetail> {
+  const { data } = await api.post<Envelope<ProjectDetail>>("/projects", body);
+  return data.data;
+}
+
+export async function updateProject(
+  id: string,
+  body: { name?: string; description?: string | null },
+): Promise<ProjectDetail> {
+  const { data } = await api.patch<Envelope<ProjectDetail>>(
+    `/projects/${id}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await api.delete(`/projects/${id}`);
+}
