@@ -69,13 +69,8 @@ app = FastAPI(
 # RequestID must be outermost so the ID is available for the logging middleware.
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(LoggingMiddleware)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS is handled by the nginx gateway — do NOT add CORSMiddleware here
+# to avoid duplicate Access-Control-Allow-Origin headers.
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(v1_router, prefix="/api/v1")
