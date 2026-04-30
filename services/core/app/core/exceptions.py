@@ -11,6 +11,7 @@ source of truth — so they never diverge between exceptions and API responses.
 from app.utils.constants import (
     ERR_ALREADY_MEMBER,
     ERR_AUTH_SERVICE_UNAVAILABLE,
+    ERR_EPIC_NOT_FOUND,
     ERR_INVALID_TOKEN,
     ERR_KEY_GENERATION_FAILED,
     ERR_NOT_A_MEMBER,
@@ -62,6 +63,13 @@ class ProjectNotFoundError(AppException):
 
 
 # ── 400 Bad Request ───────────────────────────────────────────────────────────────
+
+
+class EpicNotFoundError(AppException):
+    """Raised when an epic does not exist or has been soft-deleted."""
+
+    status_code = 404
+    detail = ERR_EPIC_NOT_FOUND
 
 
 class BadRequestError(AppException):

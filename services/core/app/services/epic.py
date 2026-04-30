@@ -13,12 +13,17 @@ Reporter names are resolved from ``project_members`` (denormalised).
 import logging
 import uuid
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ProjectMembership
+from app.core.exceptions import EpicNotFoundError
+from app.models.project_member import ProjectMember
 from app.repositories import epic as epic_repo
 from app.repositories import project_members as member_repo
+from app.schemas.common import Pagination, paginate
 from app.schemas.epic import EpicOut, EpicProgressOut, ReporterRef
+from app.utils.constants import DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -69,3 +74,59 @@ async def create_epic(
 
     logger.info("Epic created: id=%s project=%s by user=%s", epic.id, epic.project_id, user.id)
     return _to_epic_out(epic, reporter_name=user.name)
+
+
+async def list_epics(
+    db: AsyncSession,
+    *,
+    membership: ProjectMembership,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
+) -> tuple[list[EpicOut], Pagination]:
+    """Return paginated epics for a project, each with live progress counts."""
+    page = max(1, page)
+    page_size = min(max(1, page_size), MAX_PAGE_SIZE)
+    offset = (page - 1) * page_size
+
+    total = await epic_repo.count_for_project(db, membership.project_id)
+    rows = await epic_repo.list_with_progress(
+        db, membership.project_id, offset=offset, limit=page_size
+    )
+
+    # Batch-resolve reporter names from project_members (one query).
+    reporter_ids = list({r.epic.reporter_id for r in rows})
+    name_by_id: dict[uuid.UUID, str] = {}
+    if reporter_ids:
+        result = await db.execute(
+            select(ProjectMember.user_id, ProjectMember.name).where(
+                ProjectMember.project_id == membership.project_id,
+                ProjectMember.user_id.in_(reporter_ids),
+            )
+        )
+        name_by_id = {row.user_id: row.name for row in result}
+
+    items = [
+        _to_epic_out(
+            r.epic,
+            reporter_name=name_by_id.get(r.epic.reporter_id, ""),
+            total=r.total,
+            done=r.done,
+        )
+        for r in rows
+    ]
+    return items, paginate(page, page_size, total)
+
+
+async def get_epic(
+    db: AsyncSession,
+    *,
+    epic_id: uuid.UUID,
+    membership: ProjectMembership,
+) -> EpicOut:
+    """Return a single epic with progress. Raises EpicNotFoundError if absent."""
+    row = await epic_repo.get_with_progress(db, epic_id, membership.project_id)
+    if row is None:
+        raise EpicNotFoundError()
+
+    reporter_name = await _resolve_reporter_name(db, membership.project_id, row.epic.reporter_id)
+    return _to_epic_out(row.epic, reporter_name=reporter_name, total=row.total, done=row.done)
