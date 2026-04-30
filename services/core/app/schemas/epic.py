@@ -20,6 +20,13 @@ class EpicCreate(CamelModel):
     description: str | None = Field(None, max_length=10_000)
 
 
+class EpicUpdate(CamelModel):
+    """Body for PATCH /api/v1/projects/{project_id}/epics/{epic_id} — all fields optional."""
+
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = Field(None, max_length=10_000)
+
+
 # ── Response schemas ──────────────────────────────────────────────────────────
 
 

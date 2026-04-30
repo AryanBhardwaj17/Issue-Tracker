@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, ProjectMembership, get_current_user, require_member
 from app.core.database import get_db
 from app.schemas.common import Envelope
-from app.schemas.epic import EpicCreate, EpicOut
+from app.schemas.epic import EpicCreate, EpicOut, EpicUpdate
 from app.services import epic as epic_service
 from app.utils.constants import DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
@@ -63,3 +63,28 @@ async def get_epic(
 ) -> Envelope[EpicOut]:
     epic = await epic_service.get_epic(db, epic_id=epic_id, membership=membership)
     return Envelope(data=epic)
+
+
+@router.patch("/{epic_id}", response_model=Envelope[EpicOut])
+async def update_epic(
+    body: EpicUpdate,
+    epic_id: UUID = Path(...),
+    membership: ProjectMembership = Depends(require_member),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Envelope[EpicOut]:
+    epic = await epic_service.update_epic(
+        db, epic_id=epic_id, membership=membership, user=user, data=body
+    )
+    return Envelope(message="Epic updated", data=epic)
+
+
+@router.delete("/{epic_id}", status_code=status.HTTP_200_OK, response_model=Envelope[None])
+async def delete_epic(
+    epic_id: UUID = Path(...),
+    membership: ProjectMembership = Depends(require_member),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Envelope[None]:
+    await epic_service.delete_epic(db, epic_id=epic_id, membership=membership, user=user)
+    return Envelope(message="Epic deleted", data=None)

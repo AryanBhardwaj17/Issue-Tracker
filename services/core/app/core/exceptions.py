@@ -11,6 +11,8 @@ source of truth — so they never diverge between exceptions and API responses.
 from app.utils.constants import (
     ERR_ALREADY_MEMBER,
     ERR_AUTH_SERVICE_UNAVAILABLE,
+    ERR_EPIC_DELETE_FORBIDDEN,
+    ERR_EPIC_EDIT_FORBIDDEN,
     ERR_EPIC_NOT_FOUND,
     ERR_INVALID_TOKEN,
     ERR_KEY_GENERATION_FAILED,
@@ -70,6 +72,20 @@ class EpicNotFoundError(AppException):
 
     status_code = 404
     detail = ERR_EPIC_NOT_FOUND
+
+
+class EpicEditForbiddenError(AppException):
+    """Raised when a member tries to edit an epic they did not create."""
+
+    status_code = 403
+    detail = ERR_EPIC_EDIT_FORBIDDEN
+
+
+class EpicDeleteForbiddenError(AppException):
+    """Raised when a member tries to delete an epic they did not create."""
+
+    status_code = 403
+    detail = ERR_EPIC_DELETE_FORBIDDEN
 
 
 class BadRequestError(AppException):

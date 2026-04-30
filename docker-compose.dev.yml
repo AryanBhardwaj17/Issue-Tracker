@@ -72,8 +72,8 @@ services:
     depends_on:
       auth-service:
         condition: service_started
-      # core-service:
-      #   condition: service_started
+      core-service:
+        condition: service_started
     networks:
       - issue-tracker-net
 
@@ -114,43 +114,45 @@ services:
       DATABASE_URL: postgresql+asyncpg://auth_user:auth_pass@auth-db:5432/auth_db
       INTERNAL_API_KEY: super-secret-internal-key
       GRPC_PORT: 50051
+    ports:
+      - "8001:8000"
     depends_on:
       auth-db:
         condition: service_healthy
     networks:
       - issue-tracker-net
 
-  # core-service:
-  #   build:
-  #     context: ./services/core
-  #     dockerfile: Dockerfile
-  #   container_name: core-service
-  #   env_file:
-  #     - ./services/core/.env
-  #   environment:
-  #     DATABASE_URL: postgresql+asyncpg://core_user:core_pass@core-db:5432/core_db
-  #     AUTH_SERVICE_GRPC_HOST: auth-service:50051
-  #     INTERNAL_API_KEY: super-secret-internal-key
-  #     RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-  #     LOG_LEVEL: DEBUG
-  #     LOG_FORMAT: text
-  #   ports:
-  #     - "8002:8000"
-  #   depends_on:
-  #     core-db:
-  #       condition: service_healthy
-  #     auth-service:
-  #       condition: service_started
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - issue-tracker-net
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
-  #     interval: 15s
-  #     timeout: 5s
-  #     retries: 3
-  #     start_period: 10s
+  core-service:
+    build:
+      context: ./services/core
+      dockerfile: Dockerfile
+    container_name: core-service
+    env_file:
+      - ./services/core/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://core_user:core_pass@core-db:5432/core_db
+      AUTH_SERVICE_GRPC_HOST: auth-service:50051
+      INTERNAL_API_KEY: super-secret-internal-key
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: text
+    ports:
+      - "8002:8000"
+    depends_on:
+      core-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 # ── Named volumes ─────────────────────────────────────────────────────────────
 
