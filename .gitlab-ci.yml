@@ -15,6 +15,8 @@ lint:auth:
   rules:
     - changes:
         - services/auth/**/*
+        - shared/**/*
+        - proto/**/*
 
 lint:core:
   stage: lint
@@ -27,6 +29,8 @@ lint:core:
   rules:
     - changes:
         - services/core/**/*
+        - shared/**/*
+        - proto/**/*
 
 lint:notification:
   stage: lint
@@ -39,6 +43,7 @@ lint:notification:
   rules:
     - changes:
         - services/notification/**/*
+        - shared/**/*
 
 lint:client:
   stage: lint
@@ -78,6 +83,8 @@ test:auth:
   rules:
     - changes:
         - services/auth/**/*
+        - shared/**/*
+        - proto/**/*
         - .gitlab-ci.yml
 
 test:core:
@@ -108,6 +115,9 @@ test:core:
   rules:
     - changes:
         - services/core/**/*
+        - shared/**/*
+        - proto/**/*
+        - .gitlab-ci.yml
 
 test:notification:
   stage: test
@@ -137,3 +147,5 @@ test:notification:
   rules:
     - changes:
         - services/notification/**/*
+        - shared/**/*
+        - .gitlab-ci.yml
