@@ -6,18 +6,21 @@ story-key generation with actual DB transactions.
 """
 
 import uuid
-from datetime import date
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ProjectMembership
-from app.core.exceptions import BadRequestError, ForbiddenError, StoryNotFoundError, ValidationError
+from app.core.exceptions import (
+    BadRequestError,
+    ForbiddenError,
+    StoryNotFoundError,
+    ValidationError,
+)
 from app.models.epic import Epic
 from app.models.project import Project
 from app.models.project_member import MemberRole, ProjectMember
-from app.models.story import Priority, StoryStatus, UserStory
+from app.models.story import Priority
 from app.models.task import Task
 from app.schemas.story import StoryCreate, StoryPatch
 from app.services import story as story_service
@@ -322,7 +325,9 @@ class TestListStories:
         project = await _create_project(db)
         user = _alice_user()
 
-        body1 = StoryCreate.model_validate({"title": "Backlog", "priority": "low", "status": "backlog"})
+        body1 = StoryCreate.model_validate(
+            {"title": "Backlog", "priority": "low", "status": "backlog"},
+        )
         body2 = StoryCreate.model_validate({"title": "Todo", "priority": "low", "status": "todo"})
         await story_service.create_story(db, project=project, user=user, body=body1)
         await story_service.create_story(db, project=project, user=user, body=body2)

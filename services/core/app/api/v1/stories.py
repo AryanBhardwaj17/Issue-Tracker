@@ -3,9 +3,9 @@ Stories API router.
 
 Endpoints
 ---------
-POST   /api/v1/projects/{project_id}/stories            create a story (member)
-GET    /api/v1/projects/{project_id}/stories             paginated list with filters/sort/search (member)
-GET    /api/v1/projects/{project_id}/stories/{story_id}  detail (member)
+POST   /projects/{project_id}/stories            create a story (member)
+GET    /projects/{project_id}/stories             list with filters (member)
+GET    /projects/{project_id}/stories/{story_id}  detail (member)
 PATCH  /api/v1/projects/{project_id}/stories/{story_id}  partial update (member; per-field guards)
 DELETE /api/v1/projects/{project_id}/stories/{story_id}  soft-delete + cascade (member; gated)
 """

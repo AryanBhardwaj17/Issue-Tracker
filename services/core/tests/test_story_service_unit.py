@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.api.deps import CurrentUser, ProjectMembership
-from app.core.exceptions import BadRequestError, ForbiddenError, StoryNotFoundError, ValidationError
+from app.core.exceptions import BadRequestError, ForbiddenError
 from app.models.story import Priority, StoryStatus, UserStory
 from app.services.story import (
     ALLOWED_TRANSITIONS,
@@ -234,7 +234,7 @@ class TestStatusAuthRule:
         db.refresh = AsyncMock()
 
         with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event") as mock_pub:
+             patch("app.services.story.publish_event"):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -265,7 +265,7 @@ class TestStatusAuthRule:
         db.refresh = AsyncMock()
 
         with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event") as mock_pub:
+             patch("app.services.story.publish_event"):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body

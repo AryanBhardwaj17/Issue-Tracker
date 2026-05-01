@@ -8,8 +8,6 @@ from sqlalchemy import case, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.story import Priority, StoryStatus, UserStory
-from app.utils.constants import ALLOWED_SORT_FIELDS
-
 
 # ── Atomic story-key generation ───────────────────────────────────────────────
 
