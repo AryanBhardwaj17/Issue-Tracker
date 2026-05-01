@@ -114,6 +114,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://auth_user:auth_pass@auth-db:5432/auth_db
       INTERNAL_API_KEY: super-secret-internal-key
       GRPC_PORT: 50051
+    ports:
+      - "8001:8000"
     depends_on:
       auth-db:
         condition: service_healthy
