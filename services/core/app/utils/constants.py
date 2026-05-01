@@ -36,6 +36,8 @@ MAX_TASK_DEPTH = 2  # tasks (depth 1) + subtasks (depth 2) only
 # ── Comment ───────────────────────────────────────────────────────────────────
 COMMENT_BODY_MIN_LENGTH = 1
 COMMENT_BODY_MAX_LENGTH = 10_000
+ERR_COMMENT_NOT_FOUND = "Comment not found"
+ERR_COMMENT_DELETE_FORBIDDEN = "Only the comment author or project owner can delete a comment"
 
 # ── File upload ───────────────────────────────────────────────────────────────
 ALLOWED_IMAGE_MIMES = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp"})

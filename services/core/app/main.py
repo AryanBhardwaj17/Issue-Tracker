@@ -11,13 +11,14 @@ Bootstraps the FastAPI application:
 """
 
 import logging
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import v1_router
 from app.core.config import settings
@@ -45,6 +46,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     logger = logging.getLogger(__name__)
     logger.info("Starting %s (debug=%s)", settings.APP_NAME, settings.DEBUG)
+
+    # Ensure the uploads directory exists before accepting any requests
+    os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
+    logger.info("Uploads directory ready: %s", settings.UPLOADS_DIR)
 
     _grpc_client = AuthGrpcClient()
     await _grpc_client.connect()
@@ -74,6 +79,14 @@ app.add_middleware(LoggingMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(v1_router, prefix="/api/v1")
+
+# Serve uploaded images as static files at /uploads/<filename>
+# UPLOADS_DIR is guaranteed to exist by the lifespan os.makedirs call above.
+app.mount(
+    "/uploads",
+    StaticFiles(directory=settings.UPLOADS_DIR),
+    name="uploads",
+)
 
 
 # ── Exception handlers ────────────────────────────────────────────────────────
@@ -115,4 +128,3 @@ async def validation_exception_handler(
 @app.get("/api/v1/health", tags=["health"])
 async def health() -> dict:
     return {"status": "ok", "service": settings.APP_NAME}
-
