@@ -136,6 +136,8 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       LOG_LEVEL: DEBUG
       LOG_FORMAT: text
+    volumes:
+      - uploads-data:/app/uploads
     ports:
       - "8002:8000"
     depends_on:
@@ -161,6 +163,7 @@ volumes:
   core-db-data:
   notifications-db-data:
   rabbitmq_data:
+  uploads-data:
 
 # ── Networks ──────────────────────────────────────────────────────────────────
 

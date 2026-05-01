@@ -87,6 +87,8 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FORMAT: json
+    volumes:
+      - uploads-data:/app/uploads
     depends_on:
       core-db:
         condition: service_healthy
@@ -146,6 +148,7 @@ volumes:
   auth-db-data:
   core-db-data:
   rabbitmq_data:
+  uploads-data:
 
 # ── Networks ──────────────────────────────────────────────────────────────────
 
