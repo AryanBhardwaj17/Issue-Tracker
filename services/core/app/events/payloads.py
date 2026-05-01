@@ -53,3 +53,37 @@ def build_story_unassigned_payload(
         "actor_id": str(actor_id),
         "actor_name": actor_name,
     }
+
+
+def build_comment_created_payload(
+    *,
+    project_id: uuid.UUID,
+    story_id: uuid.UUID,
+    story_key: str,
+    story_title: str,
+    comment_id: uuid.UUID,
+    author_id: uuid.UUID,
+    author_name: str,
+    reporter_id: uuid.UUID,
+    assignee_id: uuid.UUID | None,
+    body_excerpt: str,
+) -> dict[str, Any]:
+    """
+    Build payload for ``comment.created`` event.
+
+    Recipients computed by E5-S3: {assignee_id, reporter_id} minus {author_id}.
+    Payload carries all IDs so the consumer can filter without extra lookups.
+    ``body_excerpt`` is capped to 200 chars here for email preview use.
+    """
+    return {
+        "project_id": str(project_id),
+        "story_id": str(story_id),
+        "story_key": story_key,
+        "story_title": story_title,
+        "comment_id": str(comment_id),
+        "author_id": str(author_id),
+        "author_name": author_name,
+        "reporter_id": str(reporter_id),
+        "assignee_id": str(assignee_id) if assignee_id else None,
+        "body_excerpt": body_excerpt[:200],
+    }
