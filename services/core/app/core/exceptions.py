@@ -11,9 +11,11 @@ source of truth — so they never diverge between exceptions and API responses.
 from app.utils.constants import (
     ERR_ALREADY_MEMBER,
     ERR_AUTH_SERVICE_UNAVAILABLE,
+    ERR_COMMENT_NOT_FOUND,
     ERR_EPIC_DELETE_FORBIDDEN,
     ERR_EPIC_EDIT_FORBIDDEN,
     ERR_EPIC_NOT_FOUND,
+    ERR_IMAGE_TOO_LARGE,
     ERR_INVALID_TOKEN,
     ERR_KEY_GENERATION_FAILED,
     ERR_NOT_A_MEMBER,
@@ -135,6 +137,23 @@ class StoryNotFoundError(AppException):
 
     status_code = 404
     detail = ERR_STORY_NOT_FOUND
+
+
+class CommentNotFoundError(AppException):
+    """Raised when a comment does not exist or has been soft-deleted."""
+
+    status_code = 404
+    detail = ERR_COMMENT_NOT_FOUND
+
+
+# ── 413 Payload Too Large ──────────────────────────────────────────────────────
+
+
+class PayloadTooLargeError(AppException):
+    """Raised when an uploaded file exceeds the size limit."""
+
+    status_code = 413
+    detail = ERR_IMAGE_TOO_LARGE
 
 
 # ── 422 Validation ─────────────────────────────────────────────────────────────
