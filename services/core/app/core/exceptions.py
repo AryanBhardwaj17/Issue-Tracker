@@ -18,6 +18,7 @@ from app.utils.constants import (
     ERR_KEY_GENERATION_FAILED,
     ERR_NOT_A_MEMBER,
     ERR_PROJECT_NOT_FOUND,
+    ERR_STORY_NOT_FOUND,
     ERR_USER_NOT_FOUND,
 )
 
@@ -124,3 +125,22 @@ class AuthServiceUnavailableError(AppException):
 
     status_code = 503
     detail = ERR_AUTH_SERVICE_UNAVAILABLE
+
+
+# ── 404 Story ──────────────────────────────────────────────────────────────────
+
+
+class StoryNotFoundError(AppException):
+    """Raised when a story does not exist or has been soft-deleted."""
+
+    status_code = 404
+    detail = ERR_STORY_NOT_FOUND
+
+
+# ── 422 Validation ─────────────────────────────────────────────────────────────
+
+
+class ValidationError(AppException):
+    """Raised for field-level validation failures (422)."""
+
+    status_code = 422

@@ -22,8 +22,12 @@ MAX_KEY_RETRIES = 50  # attempts before KeyGenerationError is raised
 KEY_BASE_MAX_LETTERS = 4  # take first N alpha chars for the key base
 
 # ── Story validation ──────────────────────────────────────────────────────────
+STORY_TITLE_MIN_LENGTH = 1
 STORY_TITLE_MAX_LENGTH = 500
+STORY_DESCRIPTION_MAX_LENGTH = 10_000
 FIBONACCI_POINTS = frozenset({1, 2, 3, 5, 8, 13, 21})
+MAX_SEARCH_LENGTH = 200
+ALLOWED_SORT_FIELDS = ("priority", "created_at", "updated_at", "due_date", "story_key")
 
 # ── Task / subtask ────────────────────────────────────────────────────────────
 TASK_TITLE_MAX_LENGTH = 500
@@ -53,9 +57,14 @@ ERR_ALREADY_MEMBER = "User is already a member of this project"
 ERR_AUTH_SERVICE_UNAVAILABLE = "User directory unavailable. Try again later."
 ERR_SELF_TRANSFER = "Target is already the owner"
 ERR_NOT_CURRENT_MEMBER = "Target is not a current member"
+ERR_STORY_NOT_FOUND = "Story not found"
+ERR_STORY_CREATE_STATUS = "Stories can only be created in backlog or todo status"
+ERR_EPIC_NOT_IN_PROJECT = "Epic not found in this project"
+ERR_NO_FIELDS_TO_UPDATE = "No fields to update"
 ERR_INVALID_STATUS_TRANSITION = "Invalid status transition"
 ERR_BACKLOG_REGRESSION = "Cannot move a committed story back to backlog"
 ERR_ASSIGNEE_NOT_MEMBER = "Assignee must be a project member"
+ERR_DELETE_FORBIDDEN = "You can only delete items you created"
 ERR_STATUS_CHANGE_FORBIDDEN = "Only the assignee or the Owner can change this story's status"
 ERR_SUBTASK_DEPTH = "Cannot create a subtask under another subtask"
 ERR_COMMENT_EDIT_FORBIDDEN = "Only the comment author can edit this comment"
