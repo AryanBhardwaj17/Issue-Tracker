@@ -1,13 +1,12 @@
 """
-Tasks API router — CRUD for top-level tasks within a story.
+Subtasks API router — CRUD for subtasks nested under a parent task.
 
 Endpoints
 ---------
-POST   /api/v1/projects/{project_id}/stories/{story_id}/tasks            create task
-GET    /api/v1/projects/{project_id}/stories/{story_id}/tasks            list tasks
-GET    /api/v1/projects/{project_id}/stories/{story_id}/tasks/{task_id}  get task
-PATCH  /api/v1/projects/{project_id}/stories/{story_id}/tasks/{task_id}  update task
-DELETE /api/v1/projects/{project_id}/stories/{story_id}/tasks/{task_id}  delete task
+POST   /api/v1/projects/{project_id}/tasks/{task_id}/subtasks               create subtask
+GET    /api/v1/projects/{project_id}/tasks/{task_id}/subtasks               list subtasks
+PATCH  /api/v1/projects/{project_id}/tasks/{task_id}/subtasks/{subtask_id}  update subtask
+DELETE /api/v1/projects/{project_id}/tasks/{task_id}/subtasks/{subtask_id}  delete subtask
 """
 
 import uuid
@@ -23,82 +22,65 @@ from app.api.deps import (
 )
 from app.core.database import get_db
 from app.schemas.common import Envelope
-from app.schemas.task import TaskCreateRequest, TaskOut, TaskUpdateRequest
+from app.schemas.task import SubtaskOut, TaskCreateRequest, TaskOut, TaskUpdateRequest
 from app.services import task as task_service
 from app.utils.constants import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 
 router = APIRouter(
-    prefix="/projects/{project_id}/stories/{story_id}",
-    tags=["tasks"],
+    prefix="/projects/{project_id}/tasks/{task_id}",
+    tags=["subtasks"],
 )
 
 
 @router.post(
-    "/tasks",
+    "/subtasks",
     status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[TaskOut],
+    response_model=Envelope[SubtaskOut],
 )
-async def create_task(
-    story_id: uuid.UUID,
+async def create_subtask(
+    task_id: uuid.UUID,
     body: TaskCreateRequest,
     membership: ProjectMembership = Depends(require_member),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> Envelope[TaskOut]:
-    task = await task_service.create_task(
+) -> Envelope[SubtaskOut]:
+    subtask = await task_service.create_subtask(
         db,
-        story_id=story_id,
+        parent_task_id=task_id,
         project_id=membership.project_id,
         data=body,
         user=user,
     )
-    return Envelope(message="Task created", data=task)
+    return Envelope(message="Subtask created", data=subtask)
 
 
 @router.get(
-    "/tasks",
-    response_model=Envelope[list[TaskOut]],
+    "/subtasks",
+    response_model=Envelope[list[SubtaskOut]],
 )
-async def list_tasks(
-    story_id: uuid.UUID,
+async def list_subtasks(
+    task_id: uuid.UUID,
     membership: ProjectMembership = Depends(require_member),
     db: AsyncSession = Depends(get_db),
     page: int = Query(DEFAULT_PAGE, ge=1),
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=100),
-) -> Envelope[list[TaskOut]]:
-    tasks, pagination = await task_service.list_tasks_for_story(
+) -> Envelope[list[SubtaskOut]]:
+    subtasks, pagination = await task_service.list_subtasks(
         db,
-        story_id=story_id,
+        parent_task_id=task_id,
         project_id=membership.project_id,
         page=page,
         page_size=page_size,
     )
-    return Envelope(data=tasks, pagination=pagination)
-
-
-@router.get(
-    "/tasks/{task_id}",
-    response_model=Envelope[TaskOut],
-)
-async def get_task(
-    task_id: uuid.UUID,
-    membership: ProjectMembership = Depends(require_member),
-    db: AsyncSession = Depends(get_db),
-) -> Envelope[TaskOut]:
-    task = await task_service.get_task(
-        db,
-        task_id=task_id,
-        project_id=membership.project_id,
-    )
-    return Envelope(data=task)
+    return Envelope(data=subtasks, pagination=pagination)
 
 
 @router.patch(
-    "/tasks/{task_id}",
+    "/subtasks/{subtask_id}",
     response_model=Envelope[TaskOut],
 )
-async def update_task(
-    task_id: uuid.UUID,
+async def update_subtask(
+    subtask_id: uuid.UUID,
     body: TaskUpdateRequest,
     membership: ProjectMembership = Depends(require_member),
     user: CurrentUser = Depends(get_current_user),
@@ -106,7 +88,7 @@ async def update_task(
 ) -> Envelope[TaskOut]:
     task = await task_service.update_task(
         db,
-        task_id=task_id,
+        task_id=subtask_id,
         project_id=membership.project_id,
         data=body,
         user=user,
@@ -116,18 +98,18 @@ async def update_task(
 
 
 @router.delete(
-    "/tasks/{task_id}",
+    "/subtasks/{subtask_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_task(
-    task_id: uuid.UUID,
+async def delete_subtask(
+    subtask_id: uuid.UUID,
     membership: ProjectMembership = Depends(require_member),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     await task_service.soft_delete_task(
         db,
-        task_id=task_id,
+        task_id=subtask_id,
         project_id=membership.project_id,
         user=user,
         membership=membership,
