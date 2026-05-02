@@ -81,7 +81,8 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(v1_router, prefix="/api/v1")
 
 # Serve uploaded images as static files at /uploads/<filename>
-# UPLOADS_DIR is guaranteed to exist by the lifespan os.makedirs call above.
+# Ensure directory exists at import time so StaticFiles doesn't raise.
+os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
 app.mount(
     "/uploads",
     StaticFiles(directory=settings.UPLOADS_DIR),
