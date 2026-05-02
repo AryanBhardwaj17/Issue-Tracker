@@ -21,6 +21,7 @@ from app.utils.constants import (
     ERR_NOT_A_MEMBER,
     ERR_PROJECT_NOT_FOUND,
     ERR_STORY_NOT_FOUND,
+    ERR_TASK_NOT_FOUND,
     ERR_USER_NOT_FOUND,
 )
 
@@ -129,7 +130,14 @@ class AuthServiceUnavailableError(AppException):
     detail = ERR_AUTH_SERVICE_UNAVAILABLE
 
 
-# ── 404 Story ──────────────────────────────────────────────────────────────────
+# ── 404 Not Found (Domain entities) ──────────────────────────────────────────
+
+
+class TaskNotFoundError(AppException):
+    """Raised when a task does not exist or has been soft-deleted."""
+
+    status_code = 404
+    detail = ERR_TASK_NOT_FOUND
 
 
 class StoryNotFoundError(AppException):

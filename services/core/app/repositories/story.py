@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.story import Priority, StoryStatus, UserStory
 
+
 # ── Atomic story-key generation ───────────────────────────────────────────────
 
 
@@ -83,6 +84,14 @@ async def create(
     await db.flush()
     await db.refresh(story)
     return story
+
+
+async def get_by_id(db: AsyncSession, story_id: uuid.UUID) -> UserStory | None:
+    """Return a story if it exists and is not soft-deleted, else None."""
+    result = await db.execute(
+        select(UserStory).where(UserStory.id == story_id, UserStory.is_deleted.is_(False))
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_active(

@@ -44,3 +44,21 @@ async def cascade_soft_delete_project(db: AsyncSession, project_id: uuid.UUID) -
 
     # 5. Project itself
     await db.execute(update(Project).where(Project.id == project_id).values(is_deleted=True))
+
+
+async def cascade_soft_delete_story(db: AsyncSession, story_id: uuid.UUID) -> None:
+    """
+    Soft-delete a story and all its descendants.
+
+    Order: tasks (incl subtasks) → comments → story.
+    """
+    # 1. Tasks + subtasks
+    await db.execute(update(Task).where(Task.story_id == story_id).values(is_deleted=True))
+
+    # 2. Comments
+    await db.execute(
+        update(Comment).where(Comment.user_story_id == story_id).values(is_deleted=True)
+    )
+
+    # 3. Story itself
+    await db.execute(update(UserStory).where(UserStory.id == story_id).values(is_deleted=True))
