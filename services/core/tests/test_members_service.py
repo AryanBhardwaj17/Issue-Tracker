@@ -331,6 +331,7 @@ class TestTransferOwnership:
             db,
             project_id=project.id,
             caller_id=user_alice.id,
+            caller_name=user_alice.name,
             new_owner_id=user_bob.id,
         )
 
@@ -356,6 +357,7 @@ class TestTransferOwnership:
                 db,
                 project_id=uuid.uuid4(),
                 caller_id=user_alice.id,
+                caller_name=user_alice.name,
                 new_owner_id=user_bob.id,
             )
 
@@ -382,6 +384,7 @@ class TestTransferOwnership:
                 db,
                 project_id=project.id,
                 caller_id=user_bob.id,
+                caller_name=user_bob.name,
                 new_owner_id=user_charlie.id,
             )
 
@@ -398,6 +401,7 @@ class TestTransferOwnership:
                 db,
                 project_id=project.id,
                 caller_id=user_alice.id,
+                caller_name=user_alice.name,
                 new_owner_id=user_alice.id,
             )
 
@@ -415,5 +419,6 @@ class TestTransferOwnership:
                 db,
                 project_id=project.id,
                 caller_id=user_alice.id,
+                caller_name=user_alice.name,
                 new_owner_id=user_bob.id,
             )

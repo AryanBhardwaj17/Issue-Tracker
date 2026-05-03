@@ -361,7 +361,10 @@ class TestEventEmission:
             patch("app.services.story._to_story_out") as mock_out,
             patch("app.services.story.publish_event") as mock_pub,
         ):
-            mock_guard.return_value = None
+            new_member = MagicMock()
+            new_member.email = "bob@example.com"
+            new_member.name = "Bob"
+            mock_guard.return_value = new_member
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -388,9 +391,14 @@ class TestEventEmission:
         project.id = PROJECT_ID
         project.key = "PROJ"
 
+        old_member = MagicMock()
+        old_member.email = "bob@example.com"
+        old_member.name = "Bob"
+
         with (
             patch("app.services.story._to_story_out") as mock_out,
             patch("app.services.story.publish_event") as mock_pub,
+            patch("app.services.story.member_repo.get", return_value=old_member),
         ):
             mock_out.return_value = MagicMock()
             await update_story(
@@ -451,7 +459,10 @@ class TestEventEmission:
             patch("app.services.story._to_story_out") as mock_out,
             patch("app.services.story.publish_event") as mock_pub,
         ):
-            mock_guard.return_value = None
+            actor_member = MagicMock()
+            actor_member.email = "alice@example.com"
+            actor_member.name = "Alice"
+            mock_guard.return_value = actor_member
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
