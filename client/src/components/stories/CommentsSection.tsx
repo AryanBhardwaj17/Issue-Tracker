@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment, useUploadImage } from "@/hooks/useComments";
-import type { Comment, CommentCreatePayload } from "@/lib/api";
+import type { Comment, CommentCreatePayload, CommentPatchPayload } from "@/lib/api";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ImageLightbox from "@/components/ui/ImageLightbox";
@@ -32,6 +32,8 @@ export default function CommentsSection({ projectId, storyId, userRole }: Commen
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [editOriginalImageUrl, setEditOriginalImageUrl] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; } | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,10 +64,18 @@ export default function CommentsSection({ projectId, storyId, userRole }: Commen
 
   const handleEditSave = (commentId: string) => {
     if (!editBody.trim()) return;
-    updateComment.mutate({ commentId, body: { body: editBody.trim() } }, {
+    const patchBody: CommentPatchPayload = { body: editBody.trim() };
+    if (editOriginalImageUrl && !editImageUrl) {
+      patchBody.removeImage = true;
+    } else if (editImageUrl && editImageUrl !== editOriginalImageUrl) {
+      patchBody.imageUrl = editImageUrl;
+    }
+    updateComment.mutate({ commentId, body: patchBody }, {
       onSuccess: () => {
         setEditingId(null);
         setEditBody("");
+        setEditImageUrl(null);
+        setEditOriginalImageUrl(null);
       },
     });
   };
@@ -107,13 +117,16 @@ export default function CommentsSection({ projectId, storyId, userRole }: Commen
             userRole={userRole}
             isEditing={editingId === comment.id}
             editBody={editBody}
-            onEditStart={() => { setEditingId(comment.id); setEditBody(comment.body); }}
+            onEditStart={() => { setEditingId(comment.id); setEditBody(comment.body); setEditImageUrl(comment.imageUrl); setEditOriginalImageUrl(comment.imageUrl); }}
             onEditChange={setEditBody}
             onEditSave={() => handleEditSave(comment.id)}
-            onEditCancel={() => setEditingId(null)}
+            onEditCancel={() => { setEditingId(null); setEditImageUrl(null); setEditOriginalImageUrl(null); }}
             onDelete={() => setDeleteTarget({ id: comment.id })}
             onImageClick={(src) => setLightboxSrc(src)}
             isUpdating={updateComment.isPending}
+            editImageUrl={editImageUrl}
+            onEditImageChange={setEditImageUrl}
+            uploadImage={uploadImage}
           />
         ))}
       </div>
@@ -164,7 +177,7 @@ export default function CommentsSection({ projectId, storyId, userRole }: Commen
               disabled={uploadImage.isPending}
               className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
             >
-              {uploadImage.isPending ? "Uploading..." : "📎 Attach image"}
+              {uploadImage.isPending ? "Uploading..." : imageUrl ? "📎 Replace image" : "📎 Attach image"}
             </button>
             <span className="text-xs text-gray-400">Ctrl+Enter to submit</span>
           </div>
@@ -213,6 +226,9 @@ interface CommentItemProps {
   onDelete: () => void;
   onImageClick: (src: string) => void;
   isUpdating: boolean;
+  editImageUrl: string | null;
+  onEditImageChange: (url: string | null) => void;
+  uploadImage: { mutate: (file: File, opts?: { onSuccess?: (url: string) => void }) => void; isPending: boolean };
 }
 
 function CommentItem({
@@ -228,7 +244,11 @@ function CommentItem({
   onDelete,
   onImageClick,
   isUpdating,
+  editImageUrl,
+  onEditImageChange,
+  uploadImage,
 }: CommentItemProps) {
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const canEdit = canEditComment(comment, currentUserId);
   const canDelete = canDeleteComment(comment, currentUserId, userRole);
   const isOwn = comment.author.id === currentUserId;
@@ -285,7 +305,35 @@ function CommentItem({
               autoFocus
               onKeyDown={(e) => { if (e.key === "Escape") onEditCancel(); if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onEditSave(); } }}
             />
-            <div className="mt-1 flex items-center gap-2">
+            {/* Edit-mode image controls */}
+            <div className="mt-2">
+              {editImageUrl ? (
+                <div className="flex items-center gap-2">
+                  <img src={editImageUrl} alt="Attached" className="h-12 w-12 rounded object-cover" />
+                  <button onClick={() => onEditImageChange(null)} className="text-xs text-red-500 hover:underline">Remove</button>
+                  <button onClick={() => editFileInputRef.current?.click()} disabled={uploadImage.isPending} className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50">
+                    {uploadImage.isPending ? "Uploading..." : "Replace"}
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => editFileInputRef.current?.click()} disabled={uploadImage.isPending} className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50">
+                  {uploadImage.isPending ? "Uploading..." : "📎 Attach image"}
+                </button>
+              )}
+              <input
+                ref={editFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  uploadImage.mutate(file, { onSuccess: (url: string) => onEditImageChange(url) });
+                  if (editFileInputRef.current) editFileInputRef.current.value = "";
+                }}
+                className="hidden"
+              />
+            </div>
+            <div className="mt-2 flex items-center gap-2">
               <Button variant="primary" onClick={onEditSave} isLoading={isUpdating} className="!px-3 !py-1 text-xs">
                 Save
               </Button>
