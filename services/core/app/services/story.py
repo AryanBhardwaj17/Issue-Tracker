@@ -18,10 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ProjectMembership
 from app.core.exceptions import BadRequestError, ForbiddenError, StoryNotFoundError, ValidationError
+from app.events.constants import EVENT_STORY_ASSIGNED, EVENT_STORY_UNASSIGNED
 from app.events.payloads import build_story_assigned_payload, build_story_unassigned_payload
 from app.events.publisher import publish_event
 from app.models.comment import Comment
 from app.models.project import Project
+from app.models.project_member import ProjectMember
 from app.models.story import Priority, StoryStatus, UserStory
 from app.models.task import Task
 from app.repositories import epic as epic_repo
@@ -77,11 +79,12 @@ def assert_transition_allowed(old: str, new: str) -> None:
 
 async def _assert_assignee_is_member(
     db: AsyncSession, project_id: uuid.UUID, assignee_id: uuid.UUID
-) -> None:
-    """Raise 422 if the assignee is not a member of the project."""
+) -> ProjectMember:
+    """Raise 422 if the assignee is not a member of the project. Returns the member row."""
     member = await member_repo.get(db, project_id, assignee_id)
     if member is None:
         raise ValidationError(ERR_ASSIGNEE_NOT_MEMBER)
+    return member
 
 
 async def _assert_epic_in_project(
@@ -151,8 +154,9 @@ async def create_story(
         raise BadRequestError(ERR_STORY_CREATE_STATUS)
 
     # Assignee guard
+    assignee_member: ProjectMember | None = None
     if body.assignee_id is not None:
-        await _assert_assignee_is_member(db, project.id, body.assignee_id)
+        assignee_member = await _assert_assignee_is_member(db, project.id, body.assignee_id)
 
     # Epic guard
     if body.epic_id is not None:
@@ -187,17 +191,20 @@ async def create_story(
     )
 
     # Publish assigned event (if assignee is someone other than the actor)
-    if body.assignee_id is not None:
+    if body.assignee_id is not None and assignee_member is not None:
         payload = build_story_assigned_payload(
             project_id=project.id,
+            project_name=project.name,
             story_id=story.id,
             story_key=story.story_key,
             story_title=story.title,
             assignee_id=body.assignee_id,
+            assignee_email=assignee_member.email,
+            assignee_name=assignee_member.name,
             actor_id=user.id,
             actor_name=user.name,
         )
-        await publish_event("story.assigned", payload)
+        await publish_event(EVENT_STORY_ASSIGNED, payload)
 
     return await _to_story_out(db, story, project.id)
 
@@ -284,10 +291,11 @@ async def update_story(
         raise BadRequestError(ERR_NO_FIELDS_TO_UPDATE)
 
     # ── Validate assignee ─────────────────────────────────────────────────
+    new_assignee_member: ProjectMember | None = None
     if "assignee_id" in patch_data:
         new_assignee = patch_data["assignee_id"]
         if new_assignee is not None and new_assignee != story.assignee_id:
-            await _assert_assignee_is_member(db, project.id, new_assignee)
+            new_assignee_member = await _assert_assignee_is_member(db, project.id, new_assignee)
 
     # ── Validate epic ─────────────────────────────────────────────────────
     if "epic_id" in patch_data and patch_data["epic_id"] is not None:
@@ -314,22 +322,31 @@ async def update_story(
 
         if new_assignee != old_assignee:
             if new_assignee is None and old_assignee is not None:
+                # Load old assignee member row BEFORE mutation for email/name
+                old_member = await member_repo.get(db, project.id, old_assignee)
                 unassigned_event = build_story_unassigned_payload(
                     project_id=project.id,
+                    project_name=project.name,
                     story_id=story.id,
                     story_key=story.story_key,
                     story_title=story.title,
                     previous_assignee_id=old_assignee,
+                    previous_assignee_email=old_member.email if old_member else "",
+                    previous_assignee_name=old_member.name if old_member else "",
                     actor_id=user.id,
                     actor_name=user.name,
                 )
             elif new_assignee is not None:
+                # new_assignee_member already loaded by _assert_assignee_is_member above
                 assigned_event = build_story_assigned_payload(
                     project_id=project.id,
+                    project_name=project.name,
                     story_id=story.id,
                     story_key=story.story_key,
                     story_title=story.title,
                     assignee_id=new_assignee,
+                    assignee_email=new_assignee_member.email if new_assignee_member else "",
+                    assignee_name=new_assignee_member.name if new_assignee_member else "",
                     actor_id=user.id,
                     actor_name=user.name,
                 )
@@ -353,9 +370,9 @@ async def update_story(
 
     # ── Emit events after commit ──────────────────────────────────────────
     if assigned_event:
-        await publish_event("story.assigned", assigned_event)
+        await publish_event(EVENT_STORY_ASSIGNED, assigned_event)
     if unassigned_event:
-        await publish_event("story.unassigned", unassigned_event)
+        await publish_event(EVENT_STORY_UNASSIGNED, unassigned_event)
 
     return await _to_story_out(db, story, project.id)
 

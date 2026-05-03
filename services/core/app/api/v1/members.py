@@ -77,6 +77,7 @@ async def transfer_ownership(
         db,
         project_id=membership.project_id,
         caller_id=membership.user_id,
+        caller_name=membership.name,
         new_owner_id=body.new_owner_id,
     )
     return Envelope(message="Ownership transferred")
