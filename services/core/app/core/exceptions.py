@@ -92,6 +92,13 @@ class EpicDeleteForbiddenError(AppException):
     detail = ERR_EPIC_DELETE_FORBIDDEN
 
 
+class TaskNotFoundError(AppException):
+    """Raised when a task does not exist or has been soft-deleted."""
+
+    status_code = 404
+    detail = ERR_TASK_NOT_FOUND
+
+
 class BadRequestError(AppException):
     """Raised for invalid business logic requests (e.g. self-transfer)."""
 
@@ -131,13 +138,6 @@ class AuthServiceUnavailableError(AppException):
 
 
 # ── 404 Not Found (Domain entities) ──────────────────────────────────────────
-
-
-class TaskNotFoundError(AppException):
-    """Raised when a task does not exist or has been soft-deleted."""
-
-    status_code = 404
-    detail = ERR_TASK_NOT_FOUND
 
 
 class StoryNotFoundError(AppException):

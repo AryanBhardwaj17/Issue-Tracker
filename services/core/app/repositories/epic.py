@@ -37,9 +37,7 @@ async def create(
 
 async def get_by_id(db: AsyncSession, epic_id: uuid.UUID) -> Epic | None:
     """Return the epic if it exists and is not soft-deleted, else None."""
-    result = await db.execute(
-        select(Epic).where(Epic.id == epic_id, Epic.is_deleted.is_(False))
-    )
+    result = await db.execute(select(Epic).where(Epic.id == epic_id, Epic.is_deleted.is_(False)))
     return result.scalar_one_or_none()
 
 
@@ -64,9 +62,7 @@ async def list_with_progress(
     Progress excludes soft-deleted stories on both sides of the fraction.
     A single LEFT JOIN + GROUP BY avoids N+1 queries.
     """
-    total_expr = func.count(
-        case((UserStory.is_deleted.is_(False), UserStory.id), else_=None)
-    )
+    total_expr = func.count(case((UserStory.is_deleted.is_(False), UserStory.id), else_=None))
     done_expr = func.count(
         case(
             (
@@ -109,9 +105,7 @@ async def get_with_progress(
     Returns None if the epic does not exist, is soft-deleted, or belongs
     to a different project (prevents cross-project access).
     """
-    total_expr = func.count(
-        case((UserStory.is_deleted.is_(False), UserStory.id), else_=None)
-    )
+    total_expr = func.count(case((UserStory.is_deleted.is_(False), UserStory.id), else_=None))
     done_expr = func.count(
         case(
             (
@@ -182,6 +176,4 @@ async def cascade_soft_delete(db: AsyncSession, epic_id: uuid.UUID) -> None:
         .where(UserStory.epic_id == epic_id, UserStory.is_deleted.is_(False))
         .values(is_deleted=True, updated_at=now)
     )
-    await db.execute(
-        update(Epic).where(Epic.id == epic_id).values(is_deleted=True, updated_at=now)
-    )
+    await db.execute(update(Epic).where(Epic.id == epic_id).values(is_deleted=True, updated_at=now))

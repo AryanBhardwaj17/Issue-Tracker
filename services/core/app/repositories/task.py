@@ -44,9 +44,7 @@ async def create(
 
 async def get_by_id(db: AsyncSession, task_id: uuid.UUID) -> Task | None:
     """Return a task if it exists and is not soft-deleted, else None."""
-    result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.is_deleted.is_(False))
-    )
+    result = await db.execute(select(Task).where(Task.id == task_id, Task.is_deleted.is_(False)))
     return result.scalar_one_or_none()
 
 
@@ -143,6 +141,17 @@ async def soft_delete_subtasks(db: AsyncSession, parent_id: uuid.UUID) -> None:
         update(Task)
         .where(Task.parent_id == parent_id, Task.is_deleted.is_(False))
         .values(is_deleted=True, updated_at=datetime.now(UTC))
+    )
+
+
+async def update_assignee_for_story(
+    db: AsyncSession, story_id: uuid.UUID, new_assignee_id: uuid.UUID | None
+) -> None:
+    """Cascade assignee change to all non-deleted tasks/subtasks under a story."""
+    await db.execute(
+        update(Task)
+        .where(Task.story_id == story_id, Task.is_deleted.is_(False))
+        .values(assignee_id=new_assignee_id, updated_at=datetime.now(UTC))
     )
 
 

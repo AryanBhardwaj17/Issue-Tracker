@@ -117,9 +117,7 @@ async def _seed_task(
 
 
 def _ms(project, user: CurrentUser, role: str = "member") -> ProjectMembership:
-    return ProjectMembership(
-        user_id=user.id, project_id=project.id, name=user.name, role=role
-    )
+    return ProjectMembership(user_id=user.id, project_id=project.id, name=user.name, role=role)
 
 
 # ── Epic repository ───────────────────────────────────────────────────────────
@@ -291,9 +289,7 @@ class TestListEpics:
         await _seed_story(db, project.id, epic.id, user_alice.id, StoryStatus.BACKLOG, "ACM-1")
         await _seed_story(db, project.id, epic.id, user_alice.id, StoryStatus.DONE, "ACM-2")
 
-        items, _ = await epic_service.list_epics(
-            db, membership=_ms(project, user_alice, "owner")
-        )
+        items, _ = await epic_service.list_epics(db, membership=_ms(project, user_alice, "owner"))
         assert items[0].progress.total == 2
         assert items[0].progress.done == 1
 
@@ -307,15 +303,11 @@ class TestListEpics:
         story.is_deleted = True
         await db.commit()
 
-        items, _ = await epic_service.list_epics(
-            db, membership=_ms(project, user_alice, "owner")
-        )
+        items, _ = await epic_service.list_epics(db, membership=_ms(project, user_alice, "owner"))
         assert items[0].progress.total == 0
 
     @pytest.mark.asyncio
-    async def test_pagination_page_size_respected(
-        self, db: AsyncSession, user_alice: CurrentUser
-    ):
+    async def test_pagination_page_size_respected(self, db: AsyncSession, user_alice: CurrentUser):
         project = await _seed_project(db, user_alice)
         for i in range(5):
             await _seed_epic(db, project.id, user_alice.id, f"Epic {i}")
@@ -532,9 +524,7 @@ class TestDeleteEpic:
             )
 
     @pytest.mark.asyncio
-    async def test_cascade_soft_deletes_stories(
-        self, db: AsyncSession, user_alice: CurrentUser
-    ):
+    async def test_cascade_soft_deletes_stories(self, db: AsyncSession, user_alice: CurrentUser):
         project = await _seed_project(db, user_alice)
         epic = await _seed_epic(db, project.id, user_alice.id)
         story = await _seed_story(db, project.id, epic.id, user_alice.id, key="ACM-1")
@@ -567,14 +557,16 @@ class TestDeleteEpic:
         project = await _seed_project(db, user_alice)
         epic = await _seed_epic(db, project.id, user_alice.id)
         unrelated = await _seed_story(
-            db, project.id, None, user_alice.id, key="ACM-1"  # no epic_id
+            db,
+            project.id,
+            None,
+            user_alice.id,
+            key="ACM-1",  # no epic_id
         )
 
         await epic_service.delete_epic(
             db, epic_id=epic.id, membership=_ms(project, user_alice, "member"), user=user_alice
         )
 
-        row = (
-            await db.execute(select(UserStory).where(UserStory.id == unrelated.id))
-        ).scalar_one()
+        row = (await db.execute(select(UserStory).where(UserStory.id == unrelated.id))).scalar_one()
         assert row.is_deleted is False

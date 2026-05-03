@@ -170,9 +170,9 @@ async def test_list_comments_oldest_first(db, user_alice):
     await _add_member(db, project.id, user_alice.id, user_alice.name, MemberRole.OWNER)
     story = await _create_story(db, project, user_alice.id)
 
-    c1 = await _create_comment(db, story.id, user_alice.id, "First")
-    c2 = await _create_comment(db, story.id, user_alice.id, "Second")
-    c3 = await _create_comment(db, story.id, user_alice.id, "Third")
+    await _create_comment(db, story.id, user_alice.id, "First")
+    await _create_comment(db, story.id, user_alice.id, "Second")
+    await _create_comment(db, story.id, user_alice.id, "Third")
     await db.commit()
 
     membership = _membership(project.id, user_alice.id, "owner")

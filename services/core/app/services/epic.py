@@ -154,9 +154,7 @@ async def update_epic(
     if row.epic.reporter_id != user.id and membership.role != "owner":
         raise EpicEditForbiddenError()
 
-    await epic_repo.update_fields(
-        db, epic_id, name=data.name, description=data.description
-    )
+    await epic_repo.update_fields(db, epic_id, name=data.name, description=data.description)
     await db.commit()
     await db.refresh(row.epic)
 

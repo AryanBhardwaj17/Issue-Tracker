@@ -106,7 +106,10 @@ async def add_member(
 
     logger.info(
         "Member added: project=%s user=%s email=%s by=%s",
-        project_id, auth_user.id, normalized_email, caller_id,
+        project_id,
+        auth_user.id,
+        normalized_email,
+        caller_id,
     )
 
     # 6. Publish event (fire-and-forget)
@@ -184,7 +187,9 @@ async def transfer_ownership(
 
     logger.info(
         "Ownership transferred: project=%s from=%s to=%s",
-        project_id, caller_id, new_owner_id,
+        project_id,
+        caller_id,
+        new_owner_id,
     )
 
     # 6. Publish event
