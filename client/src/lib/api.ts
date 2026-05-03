@@ -258,3 +258,102 @@ export async function deleteEpic(
 ): Promise<void> {
   await api.delete(`/projects/${projectId}/epics/${epicId}`);
 }
+
+// ─── Story Types ──────────────────────────────────────────────────────────────
+
+export type StoryStatus =
+  | "todo"
+  | "in_progress"
+  | "in_review"
+  | "testing"
+  | "ready_for_prod"
+  | "done";
+
+export type StoryPriority = "low" | "medium" | "high" | "critical";
+
+export interface UserRef {
+  id: string;
+  name: string;
+}
+
+export interface Story {
+  id: string;
+  storyKey: string;
+  title: string;
+  description: string | null;
+  epicId: string | null;
+  status: StoryStatus;
+  priority: StoryPriority;
+  storyPoints: number | null;
+  assignee: UserRef | null;
+  reporter: UserRef;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoryFilters {
+  page?: number;
+  pageSize?: number;
+  status?: string[];
+  assigneeId?: string[];
+  priority?: string[];
+  epicId?: string[];
+  search?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+// ─── Story API ────────────────────────────────────────────────────────────────
+
+export async function listStories(
+  projectId: string,
+  filters: StoryFilters = {},
+): Promise<PaginatedResult<Story>> {
+  const { data } = await api.get<Envelope<Story[]>>(
+    `/projects/${projectId}/stories`,
+    { params: filters },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createStory(
+  projectId: string,
+  body: {
+    title: string;
+    priority: StoryPriority;
+    status?: string;
+    epicId?: string | null;
+    assigneeId?: string | null;
+    storyPoints?: number | null;
+    dueDate?: string | null;
+    description?: string | null;
+  },
+): Promise<Story> {
+  const { data } = await api.post<Envelope<Story>>(
+    `/projects/${projectId}/stories`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateStory(
+  projectId: string,
+  storyId: string,
+  body: {
+    title?: string;
+    status?: string;
+    priority?: string;
+    epicId?: string | null;
+    assigneeId?: string | null;
+    storyPoints?: number | null;
+    dueDate?: string | null;
+    description?: string | null;
+  },
+): Promise<Story> {
+  const { data } = await api.patch<Envelope<Story>>(
+    `/projects/${projectId}/stories/${storyId}`,
+    body,
+  );
+  return data.data;
+}
