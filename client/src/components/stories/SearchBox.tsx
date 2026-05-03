@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 interface SearchBoxProps {
   value: string;
@@ -19,12 +19,15 @@ export default function SearchBox({
   placeholder = "Search stories...",
 }: SearchBoxProps) {
   const [local, setLocal] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync local state when external value is cleared (e.g. resetFilters)
-  useEffect(() => {
+  // Derived state: sync when external value changes (e.g. filter reset).
+  // setState during render is the React-approved pattern over useEffect here.
+  if (prevValue !== value) {
+    setPrevValue(value);
     setLocal(value);
-  }, [value]);
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;

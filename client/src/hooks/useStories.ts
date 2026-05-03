@@ -12,7 +12,6 @@ import {
   listEpics,
   listStories,
   patchStory,
-  type Story,
   type StoryCreateBody,
   type StoryFilters,
   type StoryPatchBody,
