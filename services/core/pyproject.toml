@@ -18,7 +18,9 @@ dependencies = [
     "ruff>=0.15.12",
     "grpcio>=1.62.0",
     "protobuf>=4.25.0",
+    "aio-pika>=9.4.0",
     "aiofiles>=23.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [project.optional-dependencies]

@@ -25,6 +25,7 @@ from app.core.config import settings
 from app.core.database import engine
 from app.core.exceptions import AppException
 from app.core.logging import configure_logging
+from app.events import publisher as event_publisher
 from app.grpc.client import AuthGrpcClient
 from app.middleware import LoggingMiddleware, RequestIDFilter, RequestIDMiddleware
 from app.schemas.common import ErrorDetail, ErrorEnvelope
@@ -55,9 +56,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await _grpc_client.connect()
     logger.info("gRPC client connected to %s", settings.AUTH_SERVICE_GRPC_HOST)
 
+    await event_publisher.connect()
+    logger.info("Event publisher ready")
+
     yield
 
     logger.info("Shutting down %s", settings.APP_NAME)
+    await event_publisher.close()
     await _grpc_client.close()
     _grpc_client = None
     await engine.dispose()
