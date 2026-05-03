@@ -393,20 +393,23 @@ export async function deleteStory(
   await api.delete(`/projects/${projectId}/stories/${storyId}`);
 }
 
+/** Alias used by StoryHeader / StoryMetaSidebar components */
+export type StoryPatchPayload = StoryPatchBody;
+
 // ─── Task Types ───────────────────────────────────────────────────────────────
 
-export interface TaskAssignee {
+export interface UserRef {
   id: string;
   name: string;
 }
 
-export interface Subtask {
+export interface SubtaskOut {
   id: string;
   parentId: string;
   title: string;
   description: string | null;
-  priority: Priority;
-  assignee: TaskAssignee | null;
+  priority: string;
+  assignee: UserRef | null;
   reporterId: string;
   dueDate: string | null;
   isDone: boolean;
@@ -414,26 +417,34 @@ export interface Subtask {
   updatedAt: string;
 }
 
-export interface Task {
+export interface TaskOut {
   id: string;
   storyId: string;
-  parentId: null;
+  parentId: string | null;
   title: string;
   description: string | null;
-  priority: Priority;
-  assignee: TaskAssignee | null;
+  priority: string;
+  assignee: UserRef | null;
   reporterId: string;
   dueDate: string | null;
   isDone: boolean;
   createdAt: string;
   updatedAt: string;
-  subtasks: Subtask[];
+  subtasks: SubtaskOut[];
 }
 
-export interface TaskPatchBody {
+export interface TaskCreatePayload {
+  title: string;
+  description?: string | null;
+  priority: string;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
+export interface TaskPatchPayload {
   title?: string;
   description?: string | null;
-  priority?: Priority;
+  priority?: string;
   assigneeId?: string | null;
   dueDate?: string | null;
   isDone?: boolean;
@@ -446,36 +457,178 @@ export async function listTasks(
   storyId: string,
   page = 1,
   pageSize = 50,
-): Promise<PaginatedResult<Task>> {
-  const { data } = await api.get<Envelope<Task[]>>(
+): Promise<PaginatedResult<TaskOut>> {
+  const { data } = await api.get<Envelope<TaskOut[]>>(
     `/projects/${projectId}/stories/${storyId}/tasks`,
     { params: { page, pageSize } },
   );
   return { items: data.data, pagination: data.pagination! };
 }
 
-export async function patchTask(
+export async function createTask(
+  projectId: string,
+  storyId: string,
+  body: TaskCreatePayload,
+): Promise<TaskOut> {
+  const { data } = await api.post<Envelope<TaskOut>>(
+    `/projects/${projectId}/stories/${storyId}/tasks`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateTask(
   projectId: string,
   storyId: string,
   taskId: string,
-  body: TaskPatchBody,
-): Promise<Task> {
-  const { data } = await api.patch<Envelope<Task>>(
+  body: TaskPatchPayload,
+): Promise<TaskOut> {
+  const { data } = await api.patch<Envelope<TaskOut>>(
     `/projects/${projectId}/stories/${storyId}/tasks/${taskId}`,
     body,
   );
   return data.data;
 }
 
-export async function patchSubtask(
+export async function deleteTask(
   projectId: string,
+  storyId: string,
   taskId: string,
-  subtaskId: string,
-  body: TaskPatchBody,
-): Promise<Subtask> {
-  const { data } = await api.patch<Envelope<Subtask>>(
-    `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/stories/${storyId}/tasks/${taskId}`);
+}
+
+// ─── Subtask API ──────────────────────────────────────────────────────────────
+
+export async function createSubtask(
+  projectId: string,
+  parentTaskId: string,
+  body: TaskCreatePayload,
+): Promise<SubtaskOut> {
+  const { data } = await api.post<Envelope<SubtaskOut>>(
+    `/projects/${projectId}/tasks/${parentTaskId}/subtasks`,
     body,
   );
   return data.data;
 }
+
+export async function updateSubtask(
+  projectId: string,
+  parentTaskId: string,
+  subtaskId: string,
+  body: TaskPatchPayload,
+): Promise<TaskOut> {
+  const { data } = await api.patch<Envelope<TaskOut>>(
+    `/projects/${projectId}/tasks/${parentTaskId}/subtasks/${subtaskId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteSubtask(
+  projectId: string,
+  parentTaskId: string,
+  subtaskId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/tasks/${parentTaskId}/subtasks/${subtaskId}`);
+}
+
+// ─── Comment Types ────────────────────────────────────────────────────────────
+
+export interface CommentAuthor {
+  id: string;
+  name: string;
+}
+
+export interface Comment {
+  id: string;
+  userStoryId: string;
+  author: CommentAuthor;
+  body: string;
+  imageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommentCreatePayload {
+  body: string;
+  imageUrl?: string | null;
+}
+
+export interface CommentPatchPayload {
+  body?: string;
+  imageUrl?: string | null;
+  removeImage?: boolean;
+}
+
+// ─── Comment API ──────────────────────────────────────────────────────────────
+
+export async function listComments(
+  projectId: string,
+  storyId: string,
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Comment>> {
+  const { data } = await api.get<Envelope<Comment[]>>(
+    `/projects/${projectId}/stories/${storyId}/comments`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createComment(
+  projectId: string,
+  storyId: string,
+  body: CommentCreatePayload,
+): Promise<Comment> {
+  const { data } = await api.post<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/comments`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateComment(
+  projectId: string,
+  storyId: string,
+  commentId: string,
+  body: CommentPatchPayload,
+): Promise<Comment> {
+  const { data } = await api.patch<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/comments/${commentId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteComment(
+  projectId: string,
+  storyId: string,
+  commentId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/stories/${storyId}/comments/${commentId}`);
+}
+
+// ─── Upload API ───────────────────────────────────────────────────────────────
+
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await api.post<Envelope<{ url: string }>>(
+    "/upload/image",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return data.data.url;
+}
+
+// ─── Backward-compat aliases (E4-S3) ─────────────────────────────────────────
+// Our IssuesTable / TaskRows components were written with these names before
+// the E4-S4 rename.  Keep them so we don't have to touch every import site.
+export type Task = TaskOut;
+export type Subtask = SubtaskOut;
+export type TaskAssignee = { id: string; name: string };
+export type TaskPatchBody = TaskPatchPayload;
+
+export const patchTask = updateTask;
+export const patchSubtask = updateSubtask;

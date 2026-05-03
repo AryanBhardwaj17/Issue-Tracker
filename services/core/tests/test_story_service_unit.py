@@ -364,8 +364,10 @@ class TestStatusAuthRule:
         db.commit = AsyncMock()
         db.refresh = AsyncMock()
 
-        with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event"):
+        with (
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event"),
+        ):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -395,8 +397,10 @@ class TestStatusAuthRule:
         db.commit = AsyncMock()
         db.refresh = AsyncMock()
 
-        with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event"):
+        with (
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event"),
+        ):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -425,8 +429,10 @@ class TestStatusAuthRule:
         db.commit = AsyncMock()
         db.refresh = AsyncMock()
 
-        with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event"):
+        with (
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event"),
+        ):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -506,9 +512,11 @@ class TestEventEmission:
         project.id = PROJECT_ID
         project.key = "PROJ"
 
-        with patch("app.services.story._assert_assignee_is_member") as mock_guard, \
-             patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event") as mock_pub:
+        with (
+            patch("app.services.story._assert_assignee_is_member") as mock_guard,
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event") as mock_pub,
+        ):
             mock_guard.return_value = None
             mock_out.return_value = MagicMock()
             await update_story(
@@ -536,8 +544,10 @@ class TestEventEmission:
         project.id = PROJECT_ID
         project.key = "PROJ"
 
-        with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event") as mock_pub:
+        with (
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event") as mock_pub,
+        ):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -564,8 +574,10 @@ class TestEventEmission:
         project.id = PROJECT_ID
         project.key = "PROJ"
 
-        with patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event") as mock_pub:
+        with (
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event") as mock_pub,
+        ):
             mock_out.return_value = MagicMock()
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
@@ -590,9 +602,11 @@ class TestEventEmission:
         project.id = PROJECT_ID
         project.key = "PROJ"
 
-        with patch("app.services.story._assert_assignee_is_member") as mock_guard, \
-             patch("app.services.story._to_story_out") as mock_out, \
-             patch("app.services.story.publish_event") as mock_pub:
+        with (
+            patch("app.services.story._assert_assignee_is_member") as mock_guard,
+            patch("app.services.story._to_story_out") as mock_out,
+            patch("app.services.story.publish_event") as mock_pub,
+        ):
             mock_guard.return_value = None
             mock_out.return_value = MagicMock()
             await update_story(

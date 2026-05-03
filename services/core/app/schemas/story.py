@@ -62,7 +62,9 @@ class StoryPatch(CamelModel):
     """Body for PATCH /api/v1/projects/{project_id}/stories/{story_id} — all fields optional."""
 
     title: str | None = Field(
-        None, min_length=STORY_TITLE_MIN_LENGTH, max_length=STORY_TITLE_MAX_LENGTH,
+        None,
+        min_length=STORY_TITLE_MIN_LENGTH,
+        max_length=STORY_TITLE_MAX_LENGTH,
     )
     description: str | None = Field(None, max_length=STORY_DESCRIPTION_MAX_LENGTH)
     epic_id: UUID | None = None

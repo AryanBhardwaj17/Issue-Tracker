@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.story import Priority, StoryStatus, UserStory
 
-
 # ── Atomic story-key generation ───────────────────────────────────────────────
 
 
@@ -27,9 +26,7 @@ async def next_story_key(db: AsyncSession, project_id: uuid.UUID, project_key: s
     if dialect == "sqlite":
         from app.models.project import Project
 
-        result = await db.execute(
-            select(Project.next_story_seq).where(Project.id == project_id)
-        )
+        result = await db.execute(select(Project.next_story_seq).where(Project.id == project_id))
         current_seq = result.scalar_one()
         new_seq = current_seq + 1
         await db.execute(
@@ -112,9 +109,7 @@ async def get_active(
 
 async def soft_delete(db: AsyncSession, story_id: uuid.UUID) -> None:
     """Set is_deleted=True on a story."""
-    await db.execute(
-        update(UserStory).where(UserStory.id == story_id).values(is_deleted=True)
-    )
+    await db.execute(update(UserStory).where(UserStory.id == story_id).values(is_deleted=True))
 
 
 # ── List / Filter / Sort / Search ────────────────────────────────────────────
@@ -164,9 +159,7 @@ def _build_base_query(
         if has_none and not non_null_ids:
             q = q.where(UserStory.epic_id.is_(None))
         elif has_none and non_null_ids:
-            q = q.where(
-                or_(UserStory.epic_id.is_(None), UserStory.epic_id.in_(non_null_ids))
-            )
+            q = q.where(or_(UserStory.epic_id.is_(None), UserStory.epic_id.in_(non_null_ids)))
         elif non_null_ids:
             q = q.where(UserStory.epic_id.in_(non_null_ids))
 

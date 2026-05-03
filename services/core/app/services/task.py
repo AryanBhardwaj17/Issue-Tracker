@@ -42,6 +42,7 @@ from app.utils.constants import (
     ERR_TASK_DELETE_FORBIDDEN,
     ERR_TASK_DONE_FORBIDDEN,
     ERR_TASK_EDIT_FORBIDDEN,
+    ERR_TASK_SUBTASKS_INCOMPLETE,
     MAX_PAGE_SIZE,
 )
 
@@ -59,7 +60,8 @@ async def _validate_assignee(
     if member is None:
         logger.warning(
             "Assignee validation failed: user=%s not a member of project=%s",
-            assignee_id, project_id,
+            assignee_id,
+            project_id,
         )
         raise BadRequestError(ERR_ASSIGNEE_NOT_MEMBER)
 
@@ -189,7 +191,8 @@ async def create_subtask(
     if parent is None or parent.project_id != project_id:
         logger.warning(
             "Subtask create failed: parent=%s not found in project=%s",
-            parent_task_id, project_id,
+            parent_task_id,
+            project_id,
         )
         raise TaskNotFoundError()
 
@@ -263,13 +266,13 @@ async def list_tasks_for_story(
     # Build assignee map for all tasks
     assignee_map = await _build_assignee_map(db, project_id, all_tasks)
 
-    result = [
-        _task_to_out(task, subtask_map.get(task.id, []), assignee_map)
-        for task in top_tasks
-    ]
+    result = [_task_to_out(task, subtask_map.get(task.id, []), assignee_map) for task in top_tasks]
     logger.debug(
         "Listed tasks: story=%s page=%d total=%d returned=%d",
-        story_id, page, total, len(result),
+        story_id,
+        page,
+        total,
+        len(result),
     )
     return result, paginate(page, page_size, total)
 
@@ -341,12 +344,12 @@ async def update_task(
     Update a task/subtask.
 
     Permission:
-    - reporter_id == caller.id → allowed
-    - membership.role == "owner" → allowed
+    - reporter_id == caller.id → allowed (member edits own task)
+    - membership.role == "owner" → allowed (owner edits any task)
     - Otherwise → 403
 
     is_done toggle rule (additional):
-    - If the task has an assignee, only the assignee or owner can toggle is_done.
+    - If the task has an assignee, only the assignee, reporter, or owner can toggle is_done.
     """
     task = await task_repo.get_by_id(db, task_id)
     if task is None or task.project_id != project_id:
@@ -355,22 +358,34 @@ async def update_task(
     is_owner = membership.role == MemberRole.OWNER.value
     is_reporter = task.reporter_id == user.id
 
-    # Permission: only reporter or owner can edit
-    if not is_reporter and not is_owner:
+    # Also allow the story assignee to edit/toggle tasks
+    story = await story_repo.get_by_id(db, task.story_id)
+    is_story_assignee = story is not None and story.assignee_id == user.id
+
+    # Permission: only reporter, story assignee, or owner can edit
+    if not is_reporter and not is_story_assignee and not is_owner:
         logger.warning(
-            "Task edit forbidden: user=%s is not reporter/owner of task=%s", user.id, task_id
+            "Task edit forbidden: user=%s is not reporter/story-assignee/owner of task=%s",
+            user.id,
+            task_id,
         )
         raise ForbiddenError(ERR_TASK_EDIT_FORBIDDEN)
 
-    # is_done toggle: assignee-or-owner rule
-    if data.is_done is not None and task.assignee_id is not None:
-        is_assignee = task.assignee_id == user.id
-        if not is_assignee and not is_owner:
+    # is_done toggle: story assignee, reporter, or owner rule
+    if data.is_done is not None and story is not None and story.assignee_id is not None:
+        if not is_story_assignee and not is_reporter and not is_owner:
             logger.warning(
-                "is_done toggle forbidden: user=%s is not assignee/owner of task=%s",
-                user.id, task_id,
+                "is_done toggle forbidden: user=%s is not story-assignee/reporter/owner of task=%s",
+                user.id,
+                task_id,
             )
             raise ForbiddenError(ERR_TASK_DONE_FORBIDDEN)
+
+    # is_done=True on root task: all subtasks must be done first
+    if data.is_done is True and task.parent_id is None:
+        subtasks_for_check = await task_repo.list_subtasks(db, task_id)
+        if any(not s.is_done for s in subtasks_for_check):
+            raise BadRequestError(ERR_TASK_SUBTASKS_INCOMPLETE)
 
     # Validate assignee change
     if data.assignee_id is not None:

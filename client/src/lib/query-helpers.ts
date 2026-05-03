@@ -16,7 +16,7 @@ export function invalidateStoryRelated(
   qc.invalidateQueries({ queryKey: ["epics", projectId] });
   if (storyId) {
     qc.invalidateQueries({ queryKey: ["story", storyId] });
-    qc.invalidateQueries({ queryKey: ["tasks", storyId] });
-    qc.invalidateQueries({ queryKey: ["comments", storyId] });
+    qc.invalidateQueries({ queryKey: ["tasks", projectId, storyId] });
+    qc.invalidateQueries({ queryKey: ["comments", projectId, storyId] });
   }
 }

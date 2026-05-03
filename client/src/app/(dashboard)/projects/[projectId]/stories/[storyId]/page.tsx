@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import StoryDetailPage from "@/components/stories/StoryDetailPage";
 
-export default function HomePage() {
-  redirect("/login");
+export default function StoryPage() {
+  return <StoryDetailPage />;
 }

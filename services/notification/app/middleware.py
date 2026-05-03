@@ -1,8 +1,7 @@
 """
-Middleware for the Core service.
+Middleware for the Notification Service.
 
-- RequestIDMiddleware: generates/propagates X-Request-ID for every request
-  and injects it into logs via a context variable.
+- RequestIDMiddleware: generates/propagates X-Request-ID for every request.
 - LoggingMiddleware: logs request start/finish with timing.
 """
 
@@ -15,8 +14,9 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
-# Context var holds the current request ID — accessible from any logger.
-request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "request_id", default="-"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +30,14 @@ class RequestIDFilter(logging.Filter):
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
-    """
-    Propagate or generate an X-Request-ID header.
+    """Propagate or generate an X-Request-ID header."""
 
-    - If the client sends X-Request-ID, reuse it.
-    - Otherwise generate a UUID4.
-    - Set it on the response header and in the context var for logging.
-    """
-
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         incoming_id = request.headers.get("x-request-id")
         rid = incoming_id if incoming_id else str(uuid.uuid4())
         request_id_ctx.set(rid)
-
         response = await call_next(request)
         response.headers["X-Request-ID"] = rid
         return response
@@ -51,13 +46,14 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Log every HTTP request with method, path, status, and duration."""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         start = time.perf_counter()
         method = request.method
         path = request.url.path
 
-        # Skip health check noise
-        if path == "/api/v1/health":
+        if path.endswith("/health"):
             return await call_next(request)
 
         logger.info(

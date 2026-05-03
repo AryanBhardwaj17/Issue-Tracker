@@ -148,9 +148,10 @@ class TestUpdateEpicGuards:
     @pytest.mark.asyncio
     async def test_reporter_is_allowed(self):
         db = AsyncMock()
-        with patch("app.services.epic.epic_repo") as mock_repo, patch(
-            "app.services.epic.member_repo"
-        ) as mock_mr:
+        with (
+            patch("app.services.epic.epic_repo") as mock_repo,
+            patch("app.services.epic.member_repo") as mock_mr,
+        ):
             mock_repo.get_with_progress = AsyncMock(return_value=_epic_row(ALICE_ID))
             mock_repo.update_fields = AsyncMock()
             mock_member = MagicMock()
@@ -171,9 +172,10 @@ class TestUpdateEpicGuards:
     async def test_owner_is_allowed_even_if_not_reporter(self):
         db = AsyncMock()
         # Alice created the epic; Bob is owner (not reporter)
-        with patch("app.services.epic.epic_repo") as mock_repo, patch(
-            "app.services.epic.member_repo"
-        ) as mock_mr:
+        with (
+            patch("app.services.epic.epic_repo") as mock_repo,
+            patch("app.services.epic.member_repo") as mock_mr,
+        ):
             mock_repo.get_with_progress = AsyncMock(return_value=_epic_row(ALICE_ID))
             mock_repo.update_fields = AsyncMock()
             mock_member = MagicMock()

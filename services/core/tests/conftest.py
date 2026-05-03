@@ -26,13 +26,17 @@ os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
 os.environ.setdefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 os.environ.setdefault("AUTH_SERVICE_GRPC_HOST", "localhost:50051")
 
-import pytest
-import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from sqlalchemy.ext.asyncio import (  # noqa: E402
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from app.api.deps import CurrentUser, ProjectMembership
-from app.core.database import Base
-from app.grpc.client import AuthGrpcClient
+from app.api.deps import CurrentUser  # noqa: E402
+from app.core.database import Base  # noqa: E402
+from app.grpc.client import AuthGrpcClient  # noqa: E402
 
 # ── In-memory async SQLite engine ─────────────────────────────────────────────
 
@@ -51,7 +55,7 @@ AsyncTestSession = async_sessionmaker(
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
-async def setup_db() -> AsyncGenerator[None, None]:
+async def setup_db() -> AsyncGenerator[None]:
     """Create all tables before each test, drop them after."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -61,13 +65,14 @@ async def setup_db() -> AsyncGenerator[None, None]:
 
 
 @pytest_asyncio.fixture
-async def db() -> AsyncGenerator[AsyncSession, None]:
+async def db() -> AsyncGenerator[AsyncSession]:
     """Provide a fresh AsyncSession for each test."""
     async with AsyncTestSession() as session:
         yield session
 
 
 # ── Reusable user stubs ───────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def user_alice() -> CurrentUser:

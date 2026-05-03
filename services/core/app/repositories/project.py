@@ -199,6 +199,4 @@ async def get_for_update(db: AsyncSession, project_id: uuid.UUID) -> Project | N
 
 async def update_owner(db: AsyncSession, project_id: uuid.UUID, new_owner_id: uuid.UUID) -> None:
     """Set the owner_id on the project row."""
-    await db.execute(
-        update(Project).where(Project.id == project_id).values(owner_id=new_owner_id)
-    )
+    await db.execute(update(Project).where(Project.id == project_id).values(owner_id=new_owner_id))

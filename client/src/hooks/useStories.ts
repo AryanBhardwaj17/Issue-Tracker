@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import {
   createStory,
   deleteStory,
+  getStory,
   listEpics,
   listStories,
   patchStory,
@@ -46,6 +47,15 @@ export function useStories(projectId: string, filters: StoryFilters = {}) {
     queryFn: () => listStories(projectId, filters),
     enabled: !!projectId,
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+export function useStory(projectId: string, storyId: string) {
+  return useQuery({
+    queryKey: ["story", storyId],
+    queryFn: () => getStory(projectId, storyId),
+    enabled: !!projectId && !!storyId,
     staleTime: 30_000,
   });
 }
@@ -89,8 +99,23 @@ export function usePatchStory(projectId: string) {
   });
 }
 
-/** Alias kept for backward-compat with board page. */
-export const useUpdateStory = usePatchStory;
+/** Alias kept for backward-compat with board page (1-param) and detail page (2-param). */
+export function useUpdateStory(projectId: string, storyId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bodyOrObj: StoryPatchBody | { storyId: string; body: StoryPatchBody }) => {
+      if ("storyId" in bodyOrObj && "body" in bodyOrObj) {
+        return patchStory(projectId, bodyOrObj.storyId, bodyOrObj.body);
+      }
+      return patchStory(projectId, storyId!, bodyOrObj as StoryPatchBody);
+    },
+    onSuccess: (_data, variables) => {
+      const resolvedId = storyId ?? ("storyId" in variables ? (variables as { storyId: string }).storyId : undefined);
+      invalidateStoryRelated(qc, projectId, resolvedId);
+    },
+    onError: (err) => toast.error(extractErrorMessage(err, "Failed to update story")),
+  });
+}
 
 /**
  * Optimistic-update variant used by the Kanban board drag-drop.

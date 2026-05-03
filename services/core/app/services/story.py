@@ -27,6 +27,7 @@ from app.models.task import Task
 from app.repositories import epic as epic_repo
 from app.repositories import project_members as member_repo
 from app.repositories import story as story_repo
+from app.repositories import task as task_repo
 from app.schemas.common import Pagination, paginate
 from app.schemas.story import StoryCreate, StoryOut, StoryPatch, UserRef
 from app.utils.constants import (
@@ -93,9 +94,7 @@ async def _assert_epic_in_project(
         raise BadRequestError(ERR_EPIC_NOT_IN_PROJECT)
 
 
-def assert_can_delete(
-    story: UserStory, user: CurrentUser, membership: ProjectMembership
-) -> None:
+def assert_can_delete(story: UserStory, user: CurrentUser, membership: ProjectMembership) -> None:
     """Only the reporter or the project owner can delete a story."""
     if story.reporter_id == user.id or membership.role == "owner":
         return
@@ -118,18 +117,14 @@ def assert_can_edit(
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _resolve_user_ref(
-    db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
-) -> UserRef:
+async def _resolve_user_ref(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> UserRef:
     """Look up a user's display name from project_members."""
     member = await member_repo.get(db, project_id, user_id)
     name = member.name if member else ""
     return UserRef(id=user_id, name=name)
 
 
-async def _to_story_out(
-    db: AsyncSession, story: UserStory, project_id: uuid.UUID
-) -> StoryOut:
+async def _to_story_out(db: AsyncSession, story: UserStory, project_id: uuid.UUID) -> StoryOut:
     """Convert a UserStory ORM row to the response DTO with resolved names."""
     reporter = await _resolve_user_ref(db, project_id, story.reporter_id)
     assignee = None
@@ -357,6 +352,7 @@ async def update_story(
                 )
 
     # ── Persist ───────────────────────────────────────────────────────────
+    old_assignee_id = story.assignee_id  # snapshot before mutation
     for field, value in patch_data.items():
         if field == "status" and value is not None:
             setattr(story, field, StoryStatus(value))
@@ -364,6 +360,11 @@ async def update_story(
             setattr(story, field, Priority(value))
         else:
             setattr(story, field, value)
+
+    # ── Cascade assignee change to tasks/subtasks ─────────────────────────
+    if "assignee_id" in patch_data and patch_data["assignee_id"] != old_assignee_id:
+        await task_repo.update_assignee_for_story(db, story.id, patch_data["assignee_id"])
+
     await db.commit()
     await db.refresh(story)
 
@@ -395,9 +396,7 @@ async def delete_story(
     await story_repo.soft_delete(db, story_id)
 
     # Cascade to tasks (table exists — model imported at module level)
-    await db.execute(
-        update(Task).where(Task.story_id == story_id).values(is_deleted=True)
-    )
+    await db.execute(update(Task).where(Task.story_id == story_id).values(is_deleted=True))
 
     # Cascade to comments
     await db.execute(

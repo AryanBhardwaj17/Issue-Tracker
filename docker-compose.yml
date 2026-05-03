@@ -35,6 +35,23 @@ services:
       timeout: 5s
       retries: 5
 
+  notifications-db:
+    image: postgres:16-alpine
+    container_name: notifications-db
+    environment:
+      POSTGRES_USER: ${NOTIF_DB_USER}
+      POSTGRES_PASSWORD: ${NOTIF_DB_PASS}
+      POSTGRES_DB: ${NOTIF_DB_NAME}
+    volumes:
+      - notifications-db-data:/var/lib/postgresql/data
+    networks:
+      - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIF_DB_USER} -d ${NOTIF_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -106,16 +123,29 @@ services:
       start_period: 10s
 
   # notification-service:
-  #   image: ${IMAGE_NOTIFICATION}
-  #   container_name: notification-service
-  #   environment:
-  #     DATABASE_URL: postgresql+asyncpg://${NOTIF_DB_USER}:${NOTIF_DB_PASS}@notifications-db:5432/${NOTIF_DB_NAME}
-  #     RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - issue-tracker-net
+  notification-service:
+    image: ${IMAGE_NOTIFICATION}
+    container_name: notification-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${NOTIF_DB_USER}:${NOTIF_DB_PASS}@notifications-db:5432/${NOTIF_DB_NAME}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      RSA_PUBLIC_KEY: ${RSA_PUBLIC_KEY}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@issuetracker.local}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      FRONTEND_URL: ${FRONTEND_URL}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: json
+    depends_on:
+      notifications-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - issue-tracker-net
 
   # ── Gateway ──────────────────────────────────────────────────────────────────
 
@@ -147,6 +177,7 @@ services:
 volumes:
   auth-db-data:
   core-db-data:
+  notifications-db-data:
   rabbitmq_data:
   uploads-data:
 
