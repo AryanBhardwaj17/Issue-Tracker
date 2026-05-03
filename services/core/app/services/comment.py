@@ -19,9 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, ProjectMembership
 from app.core.config import settings
 from app.core.exceptions import CommentNotFoundError, ForbiddenError, StoryNotFoundError
+from app.events.constants import EVENT_COMMENT_CREATED
 from app.events.payloads import build_comment_created_payload
 from app.events.publisher import publish_event
 from app.repositories import comment as comment_repo
+from app.repositories import project as project_repo
 from app.repositories import project_members as member_repo
 from app.repositories import story as story_repo
 from app.schemas.comment import AuthorRef, CommentCreate, CommentOut, CommentUpdate
@@ -111,20 +113,31 @@ async def create_comment(
     await db.commit()
     await db.refresh(comment)
 
-    # Publish event stub — wired for real in E5-S2
+    # Publish event — load project + recipient member rows for self-contained payload
+    project = await project_repo.get_by_id(db, membership.project_id)
+    reporter_member = await member_repo.get(db, membership.project_id, story.reporter_id)
+    assignee_member = None
+    if story.assignee_id is not None:
+        assignee_member = await member_repo.get(db, membership.project_id, story.assignee_id)
+
     payload = build_comment_created_payload(
         project_id=membership.project_id,
+        project_name=project.name if project else "",
         story_id=story_id,
         story_key=story.story_key,
         story_title=story.title,
         comment_id=comment.id,
-        author_id=user.id,
-        author_name=user.name,
+        comment_author_id=user.id,
+        comment_author_name=user.name,
         reporter_id=story.reporter_id,
+        reporter_email=reporter_member.email if reporter_member else "",
+        reporter_name=reporter_member.name if reporter_member else "",
         assignee_id=story.assignee_id,
+        assignee_email=assignee_member.email if assignee_member else None,
+        assignee_name=assignee_member.name if assignee_member else None,
         body_excerpt=comment.body,
     )
-    await publish_event("comment.created", payload)
+    await publish_event(EVENT_COMMENT_CREATED, payload)
 
     return await _to_comment_out(db, comment, membership.project_id)
 

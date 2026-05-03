@@ -21,6 +21,8 @@ from app.core.exceptions import (
     UserNotFoundError,
 )
 from app.events import publisher
+from app.events.constants import EVENT_MEMBER_ADDED, EVENT_OWNERSHIP_TRANSFERRED
+from app.events.payloads import build_member_added_payload, build_ownership_transferred_payload
 from app.grpc.client import AuthGrpcClient, AuthUser
 from app.models.project_member import MemberRole
 from app.repositories import project as project_repo
@@ -114,12 +116,17 @@ async def add_member(
 
     # 6. Publish event (fire-and-forget)
     await publisher.publish_event(
-        "member.added",
-        {
-            "project_id": str(project_id),
-            "user_id": str(auth_user.id),
-            "added_by": str(caller_id),
-        },
+        EVENT_MEMBER_ADDED,
+        build_member_added_payload(
+            project_id=project_id,
+            project_name=project.name,
+            project_key=project.key,
+            added_user_id=auth_user.id,
+            added_user_email=auth_user.email,
+            added_user_name=auth_user.name,
+            actor_id=caller_id,
+            actor_name=caller_member.name,
+        ),
     )
 
     return _member_to_out(member)
@@ -150,6 +157,7 @@ async def transfer_ownership(
     *,
     project_id: uuid.UUID,
     caller_id: uuid.UUID,
+    caller_name: str,
     new_owner_id: uuid.UUID,
 ) -> None:
     """
@@ -194,10 +202,15 @@ async def transfer_ownership(
 
     # 6. Publish event
     await publisher.publish_event(
-        "ownership.transferred",
-        {
-            "project_id": str(project_id),
-            "old_owner_id": str(caller_id),
-            "new_owner_id": str(new_owner_id),
-        },
+        EVENT_OWNERSHIP_TRANSFERRED,
+        build_ownership_transferred_payload(
+            project_id=project_id,
+            project_name=project.name,
+            new_owner_id=new_owner_id,
+            new_owner_email=new_owner_member.email,
+            new_owner_name=new_owner_member.name,
+            previous_owner_id=caller_id,
+            previous_owner_name=caller_name,
+            actor_id=caller_id,
+        ),
     )
