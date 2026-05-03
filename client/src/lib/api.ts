@@ -392,3 +392,90 @@ export async function deleteStory(
 ): Promise<void> {
   await api.delete(`/projects/${projectId}/stories/${storyId}`);
 }
+
+// ─── Task Types ───────────────────────────────────────────────────────────────
+
+export interface TaskAssignee {
+  id: string;
+  name: string;
+}
+
+export interface Subtask {
+  id: string;
+  parentId: string;
+  title: string;
+  description: string | null;
+  priority: Priority;
+  assignee: TaskAssignee | null;
+  reporterId: string;
+  dueDate: string | null;
+  isDone: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Task {
+  id: string;
+  storyId: string;
+  parentId: null;
+  title: string;
+  description: string | null;
+  priority: Priority;
+  assignee: TaskAssignee | null;
+  reporterId: string;
+  dueDate: string | null;
+  isDone: boolean;
+  createdAt: string;
+  updatedAt: string;
+  subtasks: Subtask[];
+}
+
+export interface TaskPatchBody {
+  title?: string;
+  description?: string | null;
+  priority?: Priority;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+  isDone?: boolean;
+}
+
+// ─── Task API ─────────────────────────────────────────────────────────────────
+
+export async function listTasks(
+  projectId: string,
+  storyId: string,
+  page = 1,
+  pageSize = 50,
+): Promise<PaginatedResult<Task>> {
+  const { data } = await api.get<Envelope<Task[]>>(
+    `/projects/${projectId}/stories/${storyId}/tasks`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function patchTask(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  body: TaskPatchBody,
+): Promise<Task> {
+  const { data } = await api.patch<Envelope<Task>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function patchSubtask(
+  projectId: string,
+  taskId: string,
+  subtaskId: string,
+  body: TaskPatchBody,
+): Promise<Subtask> {
+  const { data } = await api.patch<Envelope<Subtask>>(
+    `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`,
+    body,
+  );
+  return data.data;
+}
