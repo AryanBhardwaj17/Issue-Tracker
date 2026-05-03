@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
  * Middleware currently handles route-level concerns (e.g. trailing slashes,
@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * to /api/v1/auth by the backend, so it's invisible to page navigations.
  */
 
-export function middleware(_: NextRequest) {
+export function middleware() {
   return NextResponse.next();
 }
 

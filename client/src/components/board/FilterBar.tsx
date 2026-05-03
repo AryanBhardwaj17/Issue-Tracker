@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { MemberOut, Epic } from "@/lib/api";
 
@@ -216,11 +216,10 @@ export default function FilterBar({
   const debouncedSearch = useDebounce(searchInput, 300);
 
   // Sync debounced search into filters
-  const prevDebounced = useRef(debouncedSearch);
-  if (prevDebounced.current !== debouncedSearch) {
-    prevDebounced.current = debouncedSearch;
+  useEffect(() => {
     onFiltersChange({ ...filters, search: debouncedSearch });
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const memberOptions: TypeaheadOption[] = members.map((m) => ({
     id: m.userId,
