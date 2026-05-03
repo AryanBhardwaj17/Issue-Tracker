@@ -60,7 +60,8 @@ async def _validate_assignee(
     if member is None:
         logger.warning(
             "Assignee validation failed: user=%s not a member of project=%s",
-            assignee_id, project_id,
+            assignee_id,
+            project_id,
         )
         raise BadRequestError(ERR_ASSIGNEE_NOT_MEMBER)
 
@@ -190,7 +191,8 @@ async def create_subtask(
     if parent is None or parent.project_id != project_id:
         logger.warning(
             "Subtask create failed: parent=%s not found in project=%s",
-            parent_task_id, project_id,
+            parent_task_id,
+            project_id,
         )
         raise TaskNotFoundError()
 
@@ -264,13 +266,13 @@ async def list_tasks_for_story(
     # Build assignee map for all tasks
     assignee_map = await _build_assignee_map(db, project_id, all_tasks)
 
-    result = [
-        _task_to_out(task, subtask_map.get(task.id, []), assignee_map)
-        for task in top_tasks
-    ]
+    result = [_task_to_out(task, subtask_map.get(task.id, []), assignee_map) for task in top_tasks]
     logger.debug(
         "Listed tasks: story=%s page=%d total=%d returned=%d",
-        story_id, page, total, len(result),
+        story_id,
+        page,
+        total,
+        len(result),
     )
     return result, paginate(page, page_size, total)
 
@@ -363,7 +365,9 @@ async def update_task(
     # Permission: only reporter, story assignee, or owner can edit
     if not is_reporter and not is_story_assignee and not is_owner:
         logger.warning(
-            "Task edit forbidden: user=%s is not reporter/story-assignee/owner of task=%s", user.id, task_id
+            "Task edit forbidden: user=%s is not reporter/story-assignee/owner of task=%s",
+            user.id,
+            task_id,
         )
         raise ForbiddenError(ERR_TASK_EDIT_FORBIDDEN)
 
@@ -372,7 +376,8 @@ async def update_task(
         if not is_story_assignee and not is_reporter and not is_owner:
             logger.warning(
                 "is_done toggle forbidden: user=%s is not story-assignee/reporter/owner of task=%s",
-                user.id, task_id,
+                user.id,
+                task_id,
             )
             raise ForbiddenError(ERR_TASK_DONE_FORBIDDEN)
 

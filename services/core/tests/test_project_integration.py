@@ -9,20 +9,16 @@ import uuid
 
 import pytest
 
-from app.core.exceptions import ForbiddenError, KeyGenerationError, ProjectNotFoundError
+from app.core.exceptions import ProjectNotFoundError
 from app.models.project_member import MemberRole
-from app.repositories import project as project_repo
 from app.repositories import project_members as member_repo
 from app.services import project as project_service
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
 async def _create(db, user, name="My Project", description=None):
-    return await project_service.create_project(
-        db, user=user, name=name, description=description
-    )
+    return await project_service.create_project(db, user=user, name=name, description=description)
 
 
 # ── create_project ────────────────────────────────────────────────────────────
@@ -66,9 +62,7 @@ class TestCreateProject:
         keys = []
         for i in range(5):
             # reuse same user — each create adds the user as owner of a new project
-            u = type(user_alice)(
-                id=uuid.uuid4(), name=f"User{i}", email=f"u{i}@test.com"
-            )
+            u = type(user_alice)(id=uuid.uuid4(), name=f"User{i}", email=f"u{i}@test.com")
             out = await _create(db, u, name="Shop Front")
             keys.append(out.key)
         assert len(set(keys)) == 5
@@ -100,9 +94,7 @@ class TestGetProject:
     @pytest.mark.asyncio
     async def test_nonexistent_project_raises_not_found(self, db, user_alice):
         with pytest.raises(ProjectNotFoundError):
-            await project_service.get_project(
-                db, project_id=uuid.uuid4(), user=user_alice
-            )
+            await project_service.get_project(db, project_id=uuid.uuid4(), user=user_alice)
 
 
 # ── list_projects ─────────────────────────────────────────────────────────────
@@ -131,7 +123,7 @@ class TestListProjects:
     @pytest.mark.asyncio
     async def test_pagination_page_size_respected(self, db, user_alice):
         for i in range(5):
-            await _create(db, user_alice, name=f"Proj {chr(65+i)}")
+            await _create(db, user_alice, name=f"Proj {chr(65 + i)}")
         items, pagination = await project_service.list_projects(
             db, user=user_alice, page=1, page_size=2
         )
@@ -154,17 +146,22 @@ class TestListProjects:
 
 class TestUpdateProject:
     def _membership(self, user, project_id, role="owner"):
-        from app.schemas.project import ProjectUpdateRequest
-        return type("ProjectMembership", (), {
-            "user_id": user.id,
-            "project_id": project_id,
-            "role": role,
-            "name": user.name,
-        })()
+
+        return type(
+            "ProjectMembership",
+            (),
+            {
+                "user_id": user.id,
+                "project_id": project_id,
+                "role": role,
+                "name": user.name,
+            },
+        )()
 
     @pytest.mark.asyncio
     async def test_owner_can_update_name(self, db, user_alice):
         from app.schemas.project import ProjectUpdateRequest
+
         created = await _create(db, user_alice)
         membership = self._membership(user_alice, created.id)
         updated = await project_service.update_project(
@@ -179,6 +176,7 @@ class TestUpdateProject:
     @pytest.mark.asyncio
     async def test_update_description_only(self, db, user_alice):
         from app.schemas.project import ProjectUpdateRequest
+
         created = await _create(db, user_alice, description="old")
         membership = self._membership(user_alice, created.id)
         updated = await project_service.update_project(
@@ -193,6 +191,7 @@ class TestUpdateProject:
     @pytest.mark.asyncio
     async def test_key_not_changed_by_name_update(self, db, user_alice):
         from app.schemas.project import ProjectUpdateRequest
+
         created = await _create(db, user_alice, name="Alpha")
         membership = self._membership(user_alice, created.id)
         updated = await project_service.update_project(

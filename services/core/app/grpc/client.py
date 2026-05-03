@@ -85,7 +85,4 @@ class AuthGrpcClient:
         except grpc.aio.AioRpcError as exc:
             logger.error("gRPC GetUsersByIds failed: %s", exc)
             raise
-        return [
-            AuthUser(id=uuid.UUID(u.id), name=u.name, email=u.email)
-            for u in resp.users
-        ]
+        return [AuthUser(id=uuid.UUID(u.id), name=u.name, email=u.email) for u in resp.users]

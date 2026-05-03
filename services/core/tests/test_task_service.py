@@ -33,7 +33,6 @@ from app.repositories import task as task_repo
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
 from app.services import task as task_service
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
@@ -44,7 +43,12 @@ async def project(db: AsyncSession, user_alice: CurrentUser):
         db, name="Test Project", key="TEST", description=None, owner_id=user_alice.id
     )
     await member_repo.add_member(
-        db, project_id=proj.id, user_id=user_alice.id, name="Alice", email="alice@example.com", role=MemberRole.OWNER
+        db,
+        project_id=proj.id,
+        user_id=user_alice.id,
+        name="Alice",
+        email="alice@example.com",
+        role=MemberRole.OWNER,
     )
     await db.commit()
     return proj
@@ -54,7 +58,12 @@ async def project(db: AsyncSession, user_alice: CurrentUser):
 async def bob_membership(db: AsyncSession, project, user_bob: CurrentUser):
     """Add Bob as a member of the project."""
     await member_repo.add_member(
-        db, project_id=project.id, user_id=user_bob.id, name="Bob", email="bob@example.com", role=MemberRole.MEMBER
+        db,
+        project_id=project.id,
+        user_id=user_bob.id,
+        name="Bob",
+        email="bob@example.com",
+        role=MemberRole.MEMBER,
     )
     await db.commit()
     return ProjectMembership(
@@ -132,7 +141,9 @@ class TestCreateTask:
     ):
         """Assigning to a non-member raises 400."""
         non_member_id = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
-        data = TaskCreateRequest(title="Bad Task", priority=Priority.MEDIUM, assignee_id=non_member_id)
+        data = TaskCreateRequest(
+            title="Bad Task", priority=Priority.MEDIUM, assignee_id=non_member_id
+        )
         with pytest.raises(BadRequestError, match="Assignee must be a project member"):
             await task_service.create_task(
                 db, story_id=story.id, project_id=project.id, data=data, user=user_alice
@@ -147,7 +158,9 @@ class TestCreateTask:
                 db, story_id=fake_story_id, project_id=project.id, data=data, user=user_alice
             )
 
-    async def test_create_story_wrong_project(self, db: AsyncSession, project, story, user_alice: CurrentUser):
+    async def test_create_story_wrong_project(
+        self, db: AsyncSession, project, story, user_alice: CurrentUser
+    ):
         """Creating a task where story belongs to a different project raises 404."""
         other_project_id = uuid.uuid4()
         data = TaskCreateRequest(title="Wrong Project Task", priority=Priority.LOW)
@@ -216,7 +229,11 @@ class TestCreateSubtask:
         data = TaskCreateRequest(title="Wrong Project Subtask", priority=Priority.LOW)
         with pytest.raises(TaskNotFoundError):
             await task_service.create_subtask(
-                db, parent_task_id=parent_task.id, project_id=other_project_id, data=data, user=user_alice
+                db,
+                parent_task_id=parent_task.id,
+                project_id=other_project_id,
+                data=data,
+                user=user_alice,
             )
 
     async def test_subtask_inherits_story_id(
@@ -320,8 +337,14 @@ class TestListTasks:
 
 class TestUpdateTask:
     async def test_owner_can_update_any_task(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership, alice_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
+        alice_membership,
     ):
         """Owner (Alice) can update a task created by another member (Bob)."""
         # Bob creates a task
@@ -332,8 +355,12 @@ class TestUpdateTask:
         # Alice (owner) updates it
         update_data = TaskUpdateRequest(title="Updated by Alice")
         result = await task_service.update_task(
-            db, task_id=t.id, project_id=project.id, data=update_data,
-            user=user_alice, membership=alice_membership,
+            db,
+            task_id=t.id,
+            project_id=project.id,
+            data=update_data,
+            user=user_alice,
+            membership=alice_membership,
         )
         assert result.title == "Updated by Alice"
 
@@ -347,14 +374,23 @@ class TestUpdateTask:
         )
         update_data = TaskUpdateRequest(title="Updated by Bob")
         result = await task_service.update_task(
-            db, task_id=t.id, project_id=project.id, data=update_data,
-            user=user_bob, membership=bob_membership,
+            db,
+            task_id=t.id,
+            project_id=project.id,
+            data=update_data,
+            user=user_bob,
+            membership=bob_membership,
         )
         assert result.title == "Updated by Bob"
 
     async def test_member_cannot_update_others_task(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
     ):
         """Member (Bob) cannot update a task created by another member (Alice)."""
         # Alice creates a task
@@ -366,13 +402,22 @@ class TestUpdateTask:
         update_data = TaskUpdateRequest(title="Hacked by Bob")
         with pytest.raises(ForbiddenError, match="Only the reporter or Owner can edit"):
             await task_service.update_task(
-                db, task_id=t.id, project_id=project.id, data=update_data,
-                user=user_bob, membership=bob_membership,
+                db,
+                task_id=t.id,
+                project_id=project.id,
+                data=update_data,
+                user=user_bob,
+                membership=bob_membership,
             )
 
     async def test_is_done_toggle_assignee_rule(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
     ):
         """Only assignee or owner can toggle is_done when task has an assignee."""
         # Alice creates a task assigned to Alice
@@ -386,13 +431,22 @@ class TestUpdateTask:
         update_data = TaskUpdateRequest(is_done=True)
         with pytest.raises(ForbiddenError, match="Only the assignee or Owner can toggle"):
             await task_service.update_task(
-                db, task_id=t.id, project_id=project.id, data=update_data,
-                user=user_bob, membership=bob_membership,
+                db,
+                task_id=t.id,
+                project_id=project.id,
+                data=update_data,
+                user=user_bob,
+                membership=bob_membership,
             )
 
     async def test_is_done_toggle_by_assignee(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
     ):
         """Assignee can toggle is_done on their assigned task."""
         # Alice creates a task assigned to Bob
@@ -405,14 +459,24 @@ class TestUpdateTask:
         # Bob (reporter + assignee) toggles is_done
         update_data = TaskUpdateRequest(is_done=True)
         result = await task_service.update_task(
-            db, task_id=t.id, project_id=project.id, data=update_data,
-            user=user_bob, membership=bob_membership,
+            db,
+            task_id=t.id,
+            project_id=project.id,
+            data=update_data,
+            user=user_bob,
+            membership=bob_membership,
         )
         assert result.is_done is True
 
     async def test_is_done_toggle_by_owner(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership, alice_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
+        alice_membership,
     ):
         """Owner can toggle is_done on any assigned task."""
         # Bob creates a task assigned to Bob
@@ -425,8 +489,12 @@ class TestUpdateTask:
         # Alice (owner, NOT assignee) toggles is_done
         update_data = TaskUpdateRequest(is_done=True)
         result = await task_service.update_task(
-            db, task_id=t.id, project_id=project.id, data=update_data,
-            user=user_alice, membership=alice_membership,
+            db,
+            task_id=t.id,
+            project_id=project.id,
+            data=update_data,
+            user=user_alice,
+            membership=alice_membership,
         )
         assert result.is_done is True
 
@@ -438,8 +506,12 @@ class TestUpdateTask:
         update_data = TaskUpdateRequest(title="Ghost")
         with pytest.raises(TaskNotFoundError):
             await task_service.update_task(
-                db, task_id=fake_id, project_id=project.id, data=update_data,
-                user=user_alice, membership=alice_membership,
+                db,
+                task_id=fake_id,
+                project_id=project.id,
+                data=update_data,
+                user=user_alice,
+                membership=alice_membership,
             )
 
 
@@ -463,8 +535,14 @@ class TestSoftDeleteTask:
         assert deleted is None
 
     async def test_owner_can_delete_any_task(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership, alice_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
+        alice_membership,
     ):
         """Owner (Alice) can delete a task created by Bob."""
         data = TaskCreateRequest(title="Bob's Task", priority=Priority.LOW)
@@ -478,8 +556,13 @@ class TestSoftDeleteTask:
         assert deleted is None
 
     async def test_member_cannot_delete_others_task(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser, user_bob: CurrentUser,
-        bob_membership
+        self,
+        db: AsyncSession,
+        project,
+        story,
+        user_alice: CurrentUser,
+        user_bob: CurrentUser,
+        bob_membership,
     ):
         """Member (Bob) cannot delete a task created by Alice."""
         data = TaskCreateRequest(title="Alice's Task", priority=Priority.HIGH)
@@ -511,7 +594,11 @@ class TestSoftDeleteTask:
 
         # Delete parent
         await task_service.soft_delete_task(
-            db, task_id=parent.id, project_id=project.id, user=user_alice, membership=alice_membership
+            db,
+            task_id=parent.id,
+            project_id=project.id,
+            user=user_alice,
+            membership=alice_membership,
         )
 
         # Both subtasks should be soft-deleted
@@ -525,7 +612,11 @@ class TestSoftDeleteTask:
         fake_id = uuid.uuid4()
         with pytest.raises(TaskNotFoundError):
             await task_service.soft_delete_task(
-                db, task_id=fake_id, project_id=project.id, user=user_alice, membership=alice_membership
+                db,
+                task_id=fake_id,
+                project_id=project.id,
+                user=user_alice,
+                membership=alice_membership,
             )
 
 
@@ -533,9 +624,7 @@ class TestSoftDeleteTask:
 
 
 class TestListSubtasks:
-    async def test_list_subtasks(
-        self, db: AsyncSession, project, story, user_alice: CurrentUser
-    ):
+    async def test_list_subtasks(self, db: AsyncSession, project, story, user_alice: CurrentUser):
         """List subtasks of a given parent task."""
         # Create parent + 2 subtasks
         data = TaskCreateRequest(title="Parent", priority=Priority.HIGH)

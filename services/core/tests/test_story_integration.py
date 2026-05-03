@@ -106,12 +106,14 @@ class TestCreateStory:
     async def test_create_backlog_story(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Checkout button",
-            "priority": "high",
-            "story_points": 3,
-            "status": "backlog",
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Checkout button",
+                "priority": "high",
+                "story_points": 3,
+                "status": "backlog",
+            }
+        )
 
         result = await story_service.create_story(db, project=project, user=user, body=body)
 
@@ -126,11 +128,13 @@ class TestCreateStory:
     async def test_create_todo_story(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Login page",
-            "priority": "medium",
-            "status": "todo",
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Login page",
+                "priority": "medium",
+                "status": "todo",
+            }
+        )
 
         result = await story_service.create_story(db, project=project, user=user, body=body)
         assert result.status == "todo"
@@ -139,10 +143,12 @@ class TestCreateStory:
     async def test_create_defaults_to_backlog(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Default status",
-            "priority": "low",
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Default status",
+                "priority": "low",
+            }
+        )
 
         result = await story_service.create_story(db, project=project, user=user, body=body)
         assert result.status == "backlog"
@@ -151,11 +157,13 @@ class TestCreateStory:
     async def test_create_with_invalid_status_raises_400(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Bad status",
-            "priority": "high",
-            "status": "in_progress",
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Bad status",
+                "priority": "high",
+                "status": "in_progress",
+            }
+        )
 
         with pytest.raises(BadRequestError, match="backlog or todo"):
             await story_service.create_story(db, project=project, user=user, body=body)
@@ -165,11 +173,13 @@ class TestCreateStory:
         project = await _create_project(db)
         await _add_member(db, project.id, BOB_ID)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Assigned story",
-            "priority": "high",
-            "assignee_id": str(BOB_ID),
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Assigned story",
+                "priority": "high",
+                "assignee_id": str(BOB_ID),
+            }
+        )
 
         result = await story_service.create_story(db, project=project, user=user, body=body)
         assert result.assignee is not None
@@ -179,11 +189,13 @@ class TestCreateStory:
     async def test_create_with_non_member_assignee_raises_422(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Bad assignee",
-            "priority": "high",
-            "assignee_id": str(BOB_ID),  # Bob is not a member
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Bad assignee",
+                "priority": "high",
+                "assignee_id": str(BOB_ID),  # Bob is not a member
+            }
+        )
 
         with pytest.raises(ValidationError, match="Assignee must be a project member"):
             await story_service.create_story(db, project=project, user=user, body=body)
@@ -193,11 +205,13 @@ class TestCreateStory:
         project = await _create_project(db)
         epic = await _create_epic(db, project.id)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Story with epic",
-            "priority": "medium",
-            "epic_id": str(epic.id),
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Story with epic",
+                "priority": "medium",
+                "epic_id": str(epic.id),
+            }
+        )
 
         result = await story_service.create_story(db, project=project, user=user, body=body)
         assert result.epic_id == epic.id
@@ -210,11 +224,13 @@ class TestCreateStory:
         await db.flush()
 
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Deleted epic",
-            "priority": "high",
-            "epic_id": str(epic.id),
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "Deleted epic",
+                "priority": "high",
+                "epic_id": str(epic.id),
+            }
+        )
 
         with pytest.raises(BadRequestError, match="Epic not found"):
             await story_service.create_story(db, project=project, user=user, body=body)
@@ -223,11 +239,13 @@ class TestCreateStory:
     async def test_create_with_null_story_points(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "No points",
-            "priority": "low",
-            "story_points": None,
-        })
+        body = StoryCreate.model_validate(
+            {
+                "title": "No points",
+                "priority": "low",
+                "story_points": None,
+            }
+        )
 
         result = await story_service.create_story(db, project=project, user=user, body=body)
         assert result.story_points is None
@@ -240,10 +258,12 @@ class TestCreateStory:
 
         keys = []
         for i in range(5):
-            body = StoryCreate.model_validate({
-                "title": f"Story {i}",
-                "priority": "medium",
-            })
+            body = StoryCreate.model_validate(
+                {
+                    "title": f"Story {i}",
+                    "priority": "medium",
+                }
+            )
             result = await story_service.create_story(db, project=project, user=user, body=body)
             keys.append(result.story_key)
 
@@ -314,9 +334,7 @@ class TestListStories:
             await story_service.create_story(db, project=project, user=user, body=body)
 
         ms = _membership(ALICE_ID, project.id, "owner")
-        items, pagination = await story_service.list_stories(
-            db, membership=ms, priorities=["high"]
-        )
+        items, pagination = await story_service.list_stories(db, membership=ms, priorities=["high"])
         assert pagination.total == 2
         assert all(i.priority == "high" for i in items)
 
@@ -333,9 +351,7 @@ class TestListStories:
         await story_service.create_story(db, project=project, user=user, body=body2)
 
         ms = _membership(ALICE_ID, project.id, "owner")
-        items, pagination = await story_service.list_stories(
-            db, membership=ms, statuses=["todo"]
-        )
+        items, pagination = await story_service.list_stories(db, membership=ms, statuses=["todo"])
         assert pagination.total == 1
         assert items[0].status == "todo"
 
@@ -347,11 +363,13 @@ class TestListStories:
 
         # Create stories with different combinations
         for status, priority in [("backlog", "high"), ("todo", "high"), ("todo", "low")]:
-            body = StoryCreate.model_validate({
-                "title": f"{status}-{priority}",
-                "priority": priority,
-                "status": status,
-            })
+            body = StoryCreate.model_validate(
+                {
+                    "title": f"{status}-{priority}",
+                    "priority": priority,
+                    "status": status,
+                }
+            )
             await story_service.create_story(db, project=project, user=user, body=body)
 
         ms = _membership(ALICE_ID, project.id, "owner")
@@ -371,9 +389,9 @@ class TestListStories:
         user = _alice_user()
 
         # Story with epic
-        body1 = StoryCreate.model_validate({
-            "title": "With epic", "priority": "low", "epic_id": str(epic.id)
-        })
+        body1 = StoryCreate.model_validate(
+            {"title": "With epic", "priority": "low", "epic_id": str(epic.id)}
+        )
         await story_service.create_story(db, project=project, user=user, body=body1)
 
         # Story without epic
@@ -381,9 +399,7 @@ class TestListStories:
         await story_service.create_story(db, project=project, user=user, body=body2)
 
         ms = _membership(ALICE_ID, project.id, "owner")
-        items, pagination = await story_service.list_stories(
-            db, membership=ms, epic_ids=[None]
-        )
+        items, pagination = await story_service.list_stories(db, membership=ms, epic_ids=[None])
         assert pagination.total == 1
         assert items[0].title == "No epic"
 
@@ -394,9 +410,9 @@ class TestListStories:
         epic = await _create_epic(db, project.id)
         user = _alice_user()
 
-        body1 = StoryCreate.model_validate({
-            "title": "With epic", "priority": "low", "epic_id": str(epic.id)
-        })
+        body1 = StoryCreate.model_validate(
+            {"title": "With epic", "priority": "low", "epic_id": str(epic.id)}
+        )
         body2 = StoryCreate.model_validate({"title": "No epic", "priority": "low"})
         await story_service.create_story(db, project=project, user=user, body=body1)
         await story_service.create_story(db, project=project, user=user, body=body2)
@@ -417,9 +433,7 @@ class TestListStories:
             await story_service.create_story(db, project=project, user=user, body=body)
 
         ms = _membership(ALICE_ID, project.id, "owner")
-        items, pagination = await story_service.list_stories(
-            db, membership=ms, search="Checkout"
-        )
+        items, pagination = await story_service.list_stories(db, membership=ms, search="Checkout")
         assert pagination.total == 2
 
     @pytest.mark.asyncio
@@ -481,9 +495,7 @@ class TestListStories:
             await story_service.create_story(db, project=project, user=user, body=body)
 
         ms = _membership(ALICE_ID, project.id, "owner")
-        items, pagination = await story_service.list_stories(
-            db, membership=ms, page=1, page_size=3
-        )
+        items, pagination = await story_service.list_stories(db, membership=ms, page=1, page_size=3)
         assert len(items) == 3
         assert pagination.total == 10
         assert pagination.total_pages == 4
@@ -515,9 +527,9 @@ class TestUpdateStory:
     async def test_update_status_backlog_to_todo(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Transition", "priority": "low", "status": "backlog"
-        })
+        body = StoryCreate.model_validate(
+            {"title": "Transition", "priority": "low", "status": "backlog"}
+        )
         created = await story_service.create_story(db, project=project, user=user, body=body)
 
         from app.repositories import story as story_repo
@@ -535,9 +547,9 @@ class TestUpdateStory:
     async def test_update_status_backlog_to_done_raises_400(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Bad transition", "priority": "low", "status": "backlog"
-        })
+        body = StoryCreate.model_validate(
+            {"title": "Bad transition", "priority": "low", "status": "backlog"}
+        )
         created = await story_service.create_story(db, project=project, user=user, body=body)
 
         from app.repositories import story as story_repo
@@ -555,9 +567,9 @@ class TestUpdateStory:
     async def test_update_todo_to_backlog_raises_400(self, db: AsyncSession):
         project = await _create_project(db)
         user = _alice_user()
-        body = StoryCreate.model_validate({
-            "title": "Backlog regression", "priority": "low", "status": "todo"
-        })
+        body = StoryCreate.model_validate(
+            {"title": "Backlog regression", "priority": "low", "status": "todo"}
+        )
         created = await story_service.create_story(db, project=project, user=user, body=body)
 
         from app.repositories import story as story_repo

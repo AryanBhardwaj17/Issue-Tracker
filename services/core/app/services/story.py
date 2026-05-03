@@ -93,9 +93,7 @@ async def _assert_epic_in_project(
         raise BadRequestError(ERR_EPIC_NOT_IN_PROJECT)
 
 
-def assert_can_delete(
-    story: UserStory, user: CurrentUser, membership: ProjectMembership
-) -> None:
+def assert_can_delete(story: UserStory, user: CurrentUser, membership: ProjectMembership) -> None:
     """Only the reporter or the project owner can delete a story."""
     if story.reporter_id == user.id or membership.role == "owner":
         return
@@ -105,18 +103,14 @@ def assert_can_delete(
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _resolve_user_ref(
-    db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
-) -> UserRef:
+async def _resolve_user_ref(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> UserRef:
     """Look up a user's display name from project_members."""
     member = await member_repo.get(db, project_id, user_id)
     name = member.name if member else ""
     return UserRef(id=user_id, name=name)
 
 
-async def _to_story_out(
-    db: AsyncSession, story: UserStory, project_id: uuid.UUID
-) -> StoryOut:
+async def _to_story_out(db: AsyncSession, story: UserStory, project_id: uuid.UUID) -> StoryOut:
     """Convert a UserStory ORM row to the response DTO with resolved names."""
     reporter = await _resolve_user_ref(db, project_id, story.reporter_id)
     assignee = None
@@ -385,9 +379,7 @@ async def delete_story(
     await story_repo.soft_delete(db, story_id)
 
     # Cascade to tasks (table exists — model imported at module level)
-    await db.execute(
-        update(Task).where(Task.story_id == story_id).values(is_deleted=True)
-    )
+    await db.execute(update(Task).where(Task.story_id == story_id).values(is_deleted=True))
 
     # Cascade to comments
     await db.execute(

@@ -56,9 +56,7 @@ async def list_members(db: AsyncSession, project_id: uuid.UUID) -> list[ProjectM
 
 async def count_members(db: AsyncSession, project_id: uuid.UUID) -> int:
     """Return the total number of members in a project."""
-    result = await db.execute(
-        select(func.count()).where(ProjectMember.project_id == project_id)
-    )
+    result = await db.execute(select(func.count()).where(ProjectMember.project_id == project_id))
     return result.scalar_one()
 
 

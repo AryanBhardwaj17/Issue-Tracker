@@ -82,9 +82,7 @@ def configure_logging() -> None:
     if settings.LOG_FORMAT == "json":
         handler.setFormatter(JSONFormatter())
     else:
-        handler.setFormatter(
-            logging.Formatter(fmt=_HUMAN_FORMAT, datefmt=_DATE_FORMAT)
-        )
+        handler.setFormatter(logging.Formatter(fmt=_HUMAN_FORMAT, datefmt=_DATE_FORMAT))
 
     root.addHandler(handler)
     root.setLevel(level)

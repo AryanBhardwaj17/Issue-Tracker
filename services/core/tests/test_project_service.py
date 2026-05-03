@@ -13,10 +13,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.exceptions import KeyGenerationError
-from app.models.project_member import MemberRole
 from app.schemas.project import ProjectOut
 from app.services.project import _next_unique_key, _to_project_out, extract_key_base
-
 
 # ── extract_key_base ──────────────────────────────────────────────────────────
 

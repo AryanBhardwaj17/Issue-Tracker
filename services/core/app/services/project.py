@@ -129,7 +129,9 @@ async def create_project(
 
             logger.info(
                 "Project created: id=%s key=%s by user=%s",
-                project.id, project.key, user.id,
+                project.id,
+                project.key,
+                user.id,
             )
 
             return _to_project_out(

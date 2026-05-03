@@ -44,9 +44,7 @@ async def create(
 
 async def get_by_id(db: AsyncSession, task_id: uuid.UUID) -> Task | None:
     """Return a task if it exists and is not soft-deleted, else None."""
-    result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.is_deleted.is_(False))
-    )
+    result = await db.execute(select(Task).where(Task.id == task_id, Task.is_deleted.is_(False)))
     return result.scalar_one_or_none()
 
 
