@@ -419,17 +419,22 @@ class TestUpdateTask:
         user_bob: CurrentUser,
         bob_membership,
     ):
-        """Only assignee or owner can toggle is_done when task has an assignee."""
-        # Alice creates a task assigned to Alice
+        """Only story assignee, reporter, or owner can toggle is_done when story has an assignee."""
+        # Set story assignee to Alice (owner)
+        story.assignee_id = user_alice.id
+        db.add(story)
+        await db.flush()
+
+        # Alice creates a task (Alice is reporter)
         data = TaskCreateRequest(
             title="Assigned to Alice", priority=Priority.LOW, assignee_id=user_alice.id
         )
         t = await task_service.create_task(
-            db, story_id=story.id, project_id=project.id, data=data, user=user_bob
+            db, story_id=story.id, project_id=project.id, data=data, user=user_alice
         )
-        # Bob (reporter but NOT assignee) tries to toggle is_done
+        # Bob (NOT reporter, NOT story assignee, NOT owner) tries to toggle is_done
         update_data = TaskUpdateRequest(is_done=True)
-        with pytest.raises(ForbiddenError, match="Only the assignee or Owner can toggle"):
+        with pytest.raises(ForbiddenError):
             await task_service.update_task(
                 db,
                 task_id=t.id,
