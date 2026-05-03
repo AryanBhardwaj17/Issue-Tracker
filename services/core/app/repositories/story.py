@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.story import Priority, StoryStatus, UserStory
 
-
 # ── Atomic story-key generation ───────────────────────────────────────────────
 
 

@@ -42,6 +42,7 @@ from app.utils.constants import (
     ERR_TASK_DELETE_FORBIDDEN,
     ERR_TASK_DONE_FORBIDDEN,
     ERR_TASK_EDIT_FORBIDDEN,
+    ERR_TASK_SUBTASKS_INCOMPLETE,
     MAX_PAGE_SIZE,
 )
 
@@ -341,8 +342,8 @@ async def update_task(
     Update a task/subtask.
 
     Permission:
-    - reporter_id == caller.id → allowed
-    - membership.role == "owner" → allowed
+    - reporter_id == caller.id → allowed (member edits own task)
+    - membership.role == "owner" → allowed (owner edits any task)
     - Otherwise → 403
 
     is_done toggle rule (additional):
@@ -371,6 +372,12 @@ async def update_task(
                 user.id, task_id,
             )
             raise ForbiddenError(ERR_TASK_DONE_FORBIDDEN)
+
+    # is_done=True on root task: all subtasks must be done first
+    if data.is_done is True and task.parent_id is None:
+        subtasks_for_check = await task_repo.list_subtasks(db, task_id)
+        if any(not s.is_done for s in subtasks_for_check):
+            raise BadRequestError(ERR_TASK_SUBTASKS_INCOMPLETE)
 
     # Validate assignee change
     if data.assignee_id is not None:

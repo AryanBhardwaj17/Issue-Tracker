@@ -258,3 +258,322 @@ export async function deleteEpic(
 ): Promise<void> {
   await api.delete(`/projects/${projectId}/epics/${epicId}`);
 }
+
+// ─── Story Types ──────────────────────────────────────────────────────────────
+
+export interface UserRef {
+  id: string;
+  name: string;
+}
+
+export interface Story {
+  id: string;
+  storyKey: string;
+  title: string;
+  description: string | null;
+  epicId: string | null;
+  status: string;
+  priority: string;
+  storyPoints: number | null;
+  assignee: UserRef | null;
+  reporter: UserRef;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoryCreatePayload {
+  title: string;
+  description?: string | null;
+  epicId?: string | null;
+  status?: string;
+  priority: string;
+  storyPoints?: number | null;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
+export interface StoryPatchPayload {
+  title?: string;
+  description?: string | null;
+  epicId?: string | null;
+  status?: string;
+  priority?: string;
+  storyPoints?: number | null;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
+// ─── Story API ────────────────────────────────────────────────────────────────
+
+export async function listStories(
+  projectId: string,
+  page = 1,
+  pageSize = 25,
+  filters?: { status?: string; priority?: string; epicId?: string; assigneeId?: string },
+): Promise<PaginatedResult<Story>> {
+  const { data } = await api.get<Envelope<Story[]>>(
+    `/projects/${projectId}/stories`,
+    { params: { page, pageSize, ...filters } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function getStory(
+  projectId: string,
+  storyId: string,
+): Promise<Story> {
+  const { data } = await api.get<Envelope<Story>>(
+    `/projects/${projectId}/stories/${storyId}`,
+  );
+  return data.data;
+}
+
+export async function createStory(
+  projectId: string,
+  body: StoryCreatePayload,
+): Promise<Story> {
+  const { data } = await api.post<Envelope<Story>>(
+    `/projects/${projectId}/stories`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateStory(
+  projectId: string,
+  storyId: string,
+  body: StoryPatchPayload,
+): Promise<Story> {
+  const { data } = await api.patch<Envelope<Story>>(
+    `/projects/${projectId}/stories/${storyId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteStory(
+  projectId: string,
+  storyId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/stories/${storyId}`);
+}
+
+// ─── Task Types ───────────────────────────────────────────────────────────────
+
+export interface SubtaskOut {
+  id: string;
+  parentId: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  assignee: UserRef | null;
+  reporterId: string;
+  dueDate: string | null;
+  isDone: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskOut {
+  id: string;
+  storyId: string;
+  parentId: string | null;
+  title: string;
+  description: string | null;
+  priority: string;
+  assignee: UserRef | null;
+  reporterId: string;
+  dueDate: string | null;
+  isDone: boolean;
+  createdAt: string;
+  updatedAt: string;
+  subtasks: SubtaskOut[];
+}
+
+export interface TaskCreatePayload {
+  title: string;
+  description?: string | null;
+  priority: string;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
+export interface TaskPatchPayload {
+  title?: string;
+  description?: string | null;
+  priority?: string;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+  isDone?: boolean;
+}
+
+// ─── Task API ─────────────────────────────────────────────────────────────────
+
+export async function listTasks(
+  projectId: string,
+  storyId: string,
+  page = 1,
+  pageSize = 50,
+): Promise<PaginatedResult<TaskOut>> {
+  const { data } = await api.get<Envelope<TaskOut[]>>(
+    `/projects/${projectId}/stories/${storyId}/tasks`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createTask(
+  projectId: string,
+  storyId: string,
+  body: TaskCreatePayload,
+): Promise<TaskOut> {
+  const { data } = await api.post<Envelope<TaskOut>>(
+    `/projects/${projectId}/stories/${storyId}/tasks`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateTask(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  body: TaskPatchPayload,
+): Promise<TaskOut | SubtaskOut> {
+  const { data } = await api.patch<Envelope<TaskOut | SubtaskOut>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteTask(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/stories/${storyId}/tasks/${taskId}`);
+}
+
+export async function createSubtask(
+  projectId: string,
+  parentTaskId: string,
+  body: TaskCreatePayload,
+): Promise<SubtaskOut> {
+  const { data } = await api.post<Envelope<SubtaskOut>>(
+    `/projects/${projectId}/tasks/${parentTaskId}/subtasks`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateSubtask(
+  projectId: string,
+  parentTaskId: string,
+  subtaskId: string,
+  body: TaskPatchPayload,
+): Promise<TaskOut> {
+  const { data } = await api.patch<Envelope<TaskOut>>(
+    `/projects/${projectId}/tasks/${parentTaskId}/subtasks/${subtaskId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteSubtask(
+  projectId: string,
+  parentTaskId: string,
+  subtaskId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/tasks/${parentTaskId}/subtasks/${subtaskId}`);
+}
+
+// ─── Comment Types ────────────────────────────────────────────────────────────
+
+export interface CommentAuthor {
+  id: string;
+  name: string;
+}
+
+export interface Comment {
+  id: string;
+  userStoryId: string;
+  author: CommentAuthor;
+  body: string;
+  imageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommentCreatePayload {
+  body: string;
+  imageUrl?: string | null;
+}
+
+export interface CommentPatchPayload {
+  body?: string;
+  imageUrl?: string | null;
+  removeImage?: boolean;
+}
+
+// ─── Comment API ──────────────────────────────────────────────────────────────
+
+export async function listComments(
+  projectId: string,
+  storyId: string,
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Comment>> {
+  const { data } = await api.get<Envelope<Comment[]>>(
+    `/projects/${projectId}/stories/${storyId}/comments`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createComment(
+  projectId: string,
+  storyId: string,
+  body: CommentCreatePayload,
+): Promise<Comment> {
+  const { data } = await api.post<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/comments`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateComment(
+  projectId: string,
+  storyId: string,
+  commentId: string,
+  body: CommentPatchPayload,
+): Promise<Comment> {
+  const { data } = await api.patch<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/comments/${commentId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteComment(
+  projectId: string,
+  storyId: string,
+  commentId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/stories/${storyId}/comments/${commentId}`);
+}
+
+// ─── Upload API ───────────────────────────────────────────────────────────────
+
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await api.post<Envelope<{ url: string }>>(
+    `/upload/image`,
+    formData,
+    { headers: { "Content-Type": undefined } },
+  );
+  return data.data.url;
+}
