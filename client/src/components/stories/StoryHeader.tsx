@@ -35,7 +35,7 @@ const priorityColors: Record<string, string> = {
 
 export default function StoryHeader({
   story,
-  projectId,
+  projectId: _projectId,
   onUpdate,
   onDeleteClick,
   userRole,

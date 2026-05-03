@@ -27,9 +27,10 @@ export default function InlineEdit({
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  // Sync draft when the external value changes while not editing
+  if (!editing && draft !== value) {
     setDraft(value);
-  }, [value]);
+  }
 
   useEffect(() => {
     if (editing && inputRef.current) {

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * to /api/v1/auth by the backend, so it's invisible to page navigations.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function middleware(_request: NextRequest) {
   return NextResponse.next();
 }

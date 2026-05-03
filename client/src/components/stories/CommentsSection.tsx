@@ -150,6 +150,7 @@ export default function CommentsSection({ projectId, storyId, userRole }: Commen
 
         {imageUrl && (
           <div className="mt-2 flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl} alt="Attached" className="h-12 w-12 rounded object-cover" />
             <button
               onClick={() => setImageUrl(null)}
@@ -309,6 +310,7 @@ function CommentItem({
             <div className="mt-2">
               {editImageUrl ? (
                 <div className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={editImageUrl} alt="Attached" className="h-12 w-12 rounded object-cover" />
                   <button onClick={() => onEditImageChange(null)} className="text-xs text-red-500 hover:underline">Remove</button>
                   <button onClick={() => editFileInputRef.current?.click()} disabled={uploadImage.isPending} className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50">
@@ -350,6 +352,7 @@ function CommentItem({
               </ReactMarkdown>
             </div>
             {comment.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={comment.imageUrl}
                 alt="Comment attachment"
