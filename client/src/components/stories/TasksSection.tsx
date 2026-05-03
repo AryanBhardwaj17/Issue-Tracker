@@ -5,7 +5,7 @@ import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useCreateSubtask
 import type { TaskOut, SubtaskOut, UserRef } from "@/lib/api";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { canToggleIsDone, canModifyTask } from "@/lib/auth-predicates";
+import { canModifyTask } from "@/lib/auth-predicates";
 import { useAuthStore } from "@/stores/authStore";
 
 const PRIORITY_OPTIONS = ["low", "medium", "high", "critical"];
@@ -159,6 +159,7 @@ export default function TasksSection({ projectId, storyId, userRole, storyAssign
             task={task}
             currentUserId={currentUser?.id ?? ""}
             userRole={userRole}
+            storyAssignee={storyAssignee}
             onToggle={(t, pid) => handleToggle(t, pid)}
             onDelete={(id, parentId, title) => setDeleteTarget({ id, parentId, title })}
             onUpdateTask={(taskId, body) => updateTask.mutate({ taskId, body })}
@@ -249,6 +250,7 @@ interface TaskItemProps {
   task: TaskOut;
   currentUserId: string;
   userRole: "owner" | "member";
+  storyAssignee: UserRef | null;
   onToggle: (task: TaskOut | SubtaskOut, parentId?: string) => void;
   onDelete: (id: string, parentId: string | undefined, title: string) => void;
   onUpdateTask: (taskId: string, body: Record<string, unknown>) => void;
@@ -272,6 +274,7 @@ function TaskItem({
   task,
   currentUserId,
   userRole,
+  storyAssignee,
   onToggle,
   onDelete,
   onUpdateTask,
@@ -290,14 +293,15 @@ function TaskItem({
   onSubtaskCancel,
   isCreatingSubtask,
 }: TaskItemProps) {
-  const canToggle = canToggleIsDone(task, currentUserId, userRole);
+  const isStoryAssignee = storyAssignee?.id === currentUserId;
+  const canToggle = userRole === "owner" || !storyAssignee || task.reporterId === currentUserId || isStoryAssignee;
   const canDelete = canModifyTask(task, currentUserId, userRole);
   const hasIncompleteSubtasks = !task.isDone && task.subtasks.length > 0 && task.subtasks.some((s) => !s.isDone);
   const toggleDisabled = !canToggle || hasIncompleteSubtasks;
   const toggleTitle = hasIncompleteSubtasks
     ? "Complete all subtasks first"
     : !canToggle
-      ? "Only the assignee or owner can toggle completion"
+      ? "Only the assignee, reporter, or owner can toggle completion"
       : undefined;
   const [expanded, setExpanded] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -368,7 +372,7 @@ function TaskItem({
 
         {/* Assignee — read-only */}
         <span className="text-gray-500" title="Assignee (inherited from story)">
-          👤 {task.assignee?.name || "Unassigned"}
+          👤 {storyAssignee?.name || "Unassigned"}
         </span>
 
         {/* Due date — inline editable */}
@@ -419,13 +423,14 @@ function TaskItem({
       {task.subtasks.length > 0 && (
         <div className="ml-7 mt-1 space-y-1 border-l-2 border-gray-200 pl-3">
           {task.subtasks.map((subtask) => {
-            const canToggleSub = canToggleIsDone(subtask, currentUserId, userRole);
+            const canToggleSub = userRole === "owner" || !storyAssignee || subtask.reporterId === currentUserId || isStoryAssignee;
             const canDeleteSub = canModifyTask(subtask, currentUserId, userRole);
             return (
               <SubtaskRow
                 key={subtask.id}
                 subtask={subtask}
                 parentTaskId={task.id}
+                storyAssignee={storyAssignee}
                 canToggle={canToggleSub}
                 canDelete={canDeleteSub}
                 onToggle={onToggle}
@@ -501,6 +506,7 @@ function TaskItem({
 interface SubtaskRowProps {
   subtask: SubtaskOut;
   parentTaskId: string;
+  storyAssignee: UserRef | null;
   canToggle: boolean;
   canDelete: boolean;
   onToggle: (task: SubtaskOut, parentId: string) => void;
@@ -508,7 +514,7 @@ interface SubtaskRowProps {
   onUpdate: (body: Record<string, unknown>) => void;
 }
 
-function SubtaskRow({ subtask, parentTaskId, canToggle, canDelete, onToggle, onDelete, onUpdate }: SubtaskRowProps) {
+function SubtaskRow({ subtask, parentTaskId, storyAssignee, canToggle, canDelete, onToggle, onDelete, onUpdate }: SubtaskRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(subtask.description || "");
@@ -565,7 +571,7 @@ function SubtaskRow({ subtask, parentTaskId, canToggle, canDelete, onToggle, onD
           ))}
         </select>
         <span className="text-gray-500">
-          👤 {subtask.assignee?.name || "Unassigned"}
+          👤 {storyAssignee?.name || "Unassigned"}
         </span>
         <span className="flex items-center gap-1 text-gray-500">
           📅

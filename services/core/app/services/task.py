@@ -347,7 +347,7 @@ async def update_task(
     - Otherwise → 403
 
     is_done toggle rule (additional):
-    - If the task has an assignee, only the assignee or owner can toggle is_done.
+    - If the task has an assignee, only the assignee, reporter, or owner can toggle is_done.
     """
     task = await task_repo.get_by_id(db, task_id)
     if task is None or task.project_id != project_id:
@@ -356,19 +356,22 @@ async def update_task(
     is_owner = membership.role == MemberRole.OWNER.value
     is_reporter = task.reporter_id == user.id
 
-    # Permission: only reporter or owner can edit
-    if not is_reporter and not is_owner:
+    # Also allow the story assignee to edit/toggle tasks
+    story = await story_repo.get_by_id(db, task.story_id)
+    is_story_assignee = story is not None and story.assignee_id == user.id
+
+    # Permission: only reporter, story assignee, or owner can edit
+    if not is_reporter and not is_story_assignee and not is_owner:
         logger.warning(
-            "Task edit forbidden: user=%s is not reporter/owner of task=%s", user.id, task_id
+            "Task edit forbidden: user=%s is not reporter/story-assignee/owner of task=%s", user.id, task_id
         )
         raise ForbiddenError(ERR_TASK_EDIT_FORBIDDEN)
 
-    # is_done toggle: assignee-or-owner rule
-    if data.is_done is not None and task.assignee_id is not None:
-        is_assignee = task.assignee_id == user.id
-        if not is_assignee and not is_owner:
+    # is_done toggle: story assignee, reporter, or owner rule
+    if data.is_done is not None and story is not None and story.assignee_id is not None:
+        if not is_story_assignee and not is_reporter and not is_owner:
             logger.warning(
-                "is_done toggle forbidden: user=%s is not assignee/owner of task=%s",
+                "is_done toggle forbidden: user=%s is not story-assignee/reporter/owner of task=%s",
                 user.id, task_id,
             )
             raise ForbiddenError(ERR_TASK_DONE_FORBIDDEN)

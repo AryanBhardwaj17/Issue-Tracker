@@ -27,6 +27,7 @@ from app.models.task import Task
 from app.repositories import epic as epic_repo
 from app.repositories import project_members as member_repo
 from app.repositories import story as story_repo
+from app.repositories import task as task_repo
 from app.schemas.common import Pagination, paginate
 from app.schemas.story import StoryCreate, StoryOut, StoryPatch, UserRef
 from app.utils.constants import (
@@ -340,6 +341,7 @@ async def update_story(
                 )
 
     # ── Persist ───────────────────────────────────────────────────────────
+    old_assignee_id = story.assignee_id  # snapshot before mutation
     for field, value in patch_data.items():
         if field == "status" and value is not None:
             setattr(story, field, StoryStatus(value))
@@ -347,6 +349,11 @@ async def update_story(
             setattr(story, field, Priority(value))
         else:
             setattr(story, field, value)
+
+    # ── Cascade assignee change to tasks/subtasks ─────────────────────────
+    if "assignee_id" in patch_data and patch_data["assignee_id"] != old_assignee_id:
+        await task_repo.update_assignee_for_story(db, story.id, patch_data["assignee_id"])
+
     await db.commit()
     await db.refresh(story)
 

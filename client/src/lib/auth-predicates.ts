@@ -3,7 +3,7 @@ import type { TaskOut, SubtaskOut, Comment, Story } from "./api";
 type Role = "owner" | "member";
 
 /**
- * is_done toggle: if task has assignee → only assignee or owner.
+ * is_done toggle: if task has assignee → only assignee, reporter, or owner.
  * If unassigned → any member can toggle.
  */
 export function canToggleIsDone(
@@ -13,6 +13,7 @@ export function canToggleIsDone(
 ): boolean {
   if (userRole === "owner") return true;
   if (!task.assignee) return true; // unassigned → any member
+  if (task.reporterId === currentUserId) return true; // task creator
   return task.assignee.id === currentUserId;
 }
 

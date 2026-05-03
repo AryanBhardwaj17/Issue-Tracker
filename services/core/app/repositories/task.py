@@ -146,6 +146,17 @@ async def soft_delete_subtasks(db: AsyncSession, parent_id: uuid.UUID) -> None:
     )
 
 
+async def update_assignee_for_story(
+    db: AsyncSession, story_id: uuid.UUID, new_assignee_id: uuid.UUID | None
+) -> None:
+    """Cascade assignee change to all non-deleted tasks/subtasks under a story."""
+    await db.execute(
+        update(Task)
+        .where(Task.story_id == story_id, Task.is_deleted.is_(False))
+        .values(assignee_id=new_assignee_id, updated_at=datetime.now(UTC))
+    )
+
+
 async def soft_delete_by_story(db: AsyncSession, story_id: uuid.UUID) -> None:
     """Soft-delete all tasks and subtasks belonging to a story."""
     await db.execute(
