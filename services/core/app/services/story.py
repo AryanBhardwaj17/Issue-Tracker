@@ -43,6 +43,7 @@ from app.utils.constants import (
     ERR_NO_FIELDS_TO_UPDATE,
     ERR_STATUS_CHANGE_FORBIDDEN,
     ERR_STORY_CREATE_STATUS,
+    ERR_STORY_EDIT_FORBIDDEN,
     MAX_PAGE_SIZE,
     MAX_SEARCH_LENGTH,
 )
@@ -101,6 +102,19 @@ def assert_can_delete(story: UserStory, user: CurrentUser, membership: ProjectMe
     if story.reporter_id == user.id or membership.role == "owner":
         return
     raise ForbiddenError(ERR_DELETE_FORBIDDEN)
+
+
+def assert_can_edit(
+    story: UserStory, user: CurrentUser, membership: ProjectMembership
+) -> None:
+    """Only the reporter, assignee, or the project owner can edit a story."""
+    if membership.role == "owner":
+        return
+    if story.reporter_id == user.id:
+        return
+    if story.assignee_id is not None and story.assignee_id == user.id:
+        return
+    raise ForbiddenError(ERR_STORY_EDIT_FORBIDDEN)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -289,6 +303,9 @@ async def update_story(
     patch_data = body.model_dump(exclude_unset=True)
     if not patch_data:
         raise BadRequestError(ERR_NO_FIELDS_TO_UPDATE)
+
+    # ── Permission: only reporter, assignee, or owner can edit ────────────
+    assert_can_edit(story, user, membership)
 
     # ── Validate assignee ─────────────────────────────────────────────────
     new_assignee_member: ProjectMember | None = None

@@ -16,6 +16,7 @@ import { useAuthStore } from "@/stores/authStore";
 import FilterBar, { type BoardFilters } from "@/components/board/FilterBar";
 import KanbanColumn from "@/components/board/KanbanColumn";
 import CreateStoryDialog from "@/components/board/CreateStoryDialog";
+import ViewToggle from "@/components/issues/ViewToggle";
 import type { StoryStatus, Story, Priority } from "@/lib/api";
 
 // ── Column definitions ────────────────────────────────────────────────────────
@@ -148,6 +149,11 @@ export default function BoardPage({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {/* View toggle */}
+      <div className="mb-3 flex items-center justify-between">
+        <ViewToggle active="board" />
+      </div>
+
       {/* Filter bar */}
       <FilterBar
         filters={filters}

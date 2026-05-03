@@ -108,3 +108,35 @@ export function useDeleteSubtask(projectId: string, storyId: string) {
     onError: (err) => toast.error(extractErrorMessage(err, "Failed to delete subtask")),
   });
 }
+
+// ─── Backward-compat wrappers used by TaskRows.tsx ───────────────────────────
+
+/** @deprecated Use useUpdateTask instead */
+export function useToggleTaskDone(projectId: string, storyId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, body }: { taskId: string; body: TaskPatchPayload }) =>
+      updateTask(projectId, storyId, taskId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", projectId, storyId] });
+    },
+    onError: (err) => toast.error(extractErrorMessage(err, "Failed to update task")),
+  });
+}
+
+/** @deprecated Use useUpdateSubtask instead */
+export function useToggleSubtaskDone(
+  projectId: string,
+  parentTaskId: string,
+  storyId: string,
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ subtaskId, body }: { subtaskId: string; body: TaskPatchPayload }) =>
+      updateSubtask(projectId, parentTaskId, subtaskId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", projectId, storyId] });
+    },
+    onError: (err) => toast.error(extractErrorMessage(err, "Failed to update subtask")),
+  });
+}

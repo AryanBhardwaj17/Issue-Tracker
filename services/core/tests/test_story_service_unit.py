@@ -16,6 +16,7 @@ from app.models.story import Priority, StoryStatus, UserStory
 from app.services.story import (
     ALLOWED_TRANSITIONS,
     assert_can_delete,
+    assert_can_edit,
     assert_transition_allowed,
 )
 
@@ -178,6 +179,136 @@ class TestDeleteGuard:
             assert_can_delete(story, user, membership)
 
 
+# ── Edit Guard ────────────────────────────────────────────────────────────────
+
+
+class TestEditGuard:
+    """Test that only reporter, assignee, or owner can edit a story."""
+
+    def test_reporter_can_edit(self):
+        """The creator of the story can edit it."""
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=BOB_ID)
+        user = _user(ALICE_ID)
+        membership = _membership(ALICE_ID, role="member")
+        assert_can_edit(story, user, membership)
+
+    def test_assignee_can_edit(self):
+        """The person assigned to the story can edit it."""
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=BOB_ID)
+        user = _user(BOB_ID, "Bob")
+        membership = _membership(BOB_ID, role="member")
+        assert_can_edit(story, user, membership)
+
+    def test_owner_can_edit_any(self):
+        """The project owner can edit any story."""
+        story = _fake_story(reporter_id=BOB_ID, assignee_id=BOB_ID)
+        user = _user(CHARLIE_ID, "Charlie")
+        membership = _membership(CHARLIE_ID, role="owner")
+        assert_can_edit(story, user, membership)
+
+    def test_other_member_cannot_edit_assigned_story(self):
+        """A member who is not reporter, assignee, or owner gets 403."""
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=BOB_ID)
+        user = _user(CHARLIE_ID, "Charlie")
+        membership = _membership(CHARLIE_ID, role="member")
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
+            assert_can_edit(story, user, membership)
+
+    def test_other_member_cannot_edit_unassigned_story(self):
+        """Even if a story is unassigned, only the reporter or owner can edit."""
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=None)
+        user = _user(BOB_ID, "Bob")
+        membership = _membership(BOB_ID, role="member")
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
+            assert_can_edit(story, user, membership)
+
+    def test_reporter_can_edit_unassigned_story(self):
+        """Reporter can edit their own unassigned story."""
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=None)
+        user = _user(ALICE_ID)
+        membership = _membership(ALICE_ID, role="member")
+        assert_can_edit(story, user, membership)
+
+    def test_owner_can_edit_unassigned_story(self):
+        """Owner can edit any unassigned story."""
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=None)
+        user = _user(CHARLIE_ID, "Charlie")
+        membership = _membership(CHARLIE_ID, role="owner")
+        assert_can_edit(story, user, membership)
+
+    @pytest.mark.asyncio
+    async def test_update_story_enforces_edit_guard(self):
+        """update_story should raise 403 when a member edits another's story."""
+        from app.schemas.story import StoryPatch
+        from app.services.story import update_story
+
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=BOB_ID, status="todo")
+        user = _user(CHARLIE_ID, "Charlie")
+        membership = _membership(CHARLIE_ID, role="member")
+        project = MagicMock()
+        project.id = PROJECT_ID
+        project.key = "PROJ"
+        body = StoryPatch.model_validate({"title": "Hijacked title"})
+
+        db = AsyncMock()
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
+            await update_story(
+                db, story=story, project=project, user=user, membership=membership, body=body
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_story_allows_reporter_to_edit_fields(self):
+        """Reporter can freely edit story fields like title."""
+        from app.schemas.story import StoryPatch
+        from app.services.story import update_story
+
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=BOB_ID, status="todo")
+        user = _user(ALICE_ID)
+        membership = _membership(ALICE_ID, role="member")
+        project = MagicMock()
+        project.id = PROJECT_ID
+        project.key = "PROJ"
+        body = StoryPatch.model_validate({"title": "Updated title"})
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+
+        with patch("app.services.story._to_story_out") as mock_out, \
+             patch("app.services.story.publish_event"):
+            mock_out.return_value = MagicMock()
+            await update_story(
+                db, story=story, project=project, user=user, membership=membership, body=body
+            )
+            db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_update_story_allows_assignee_to_edit_fields(self):
+        """Assignee can freely edit story fields like priority."""
+        from app.schemas.story import StoryPatch
+        from app.services.story import update_story
+
+        story = _fake_story(reporter_id=ALICE_ID, assignee_id=BOB_ID, status="todo")
+        user = _user(BOB_ID, "Bob")
+        membership = _membership(BOB_ID, role="member")
+        project = MagicMock()
+        project.id = PROJECT_ID
+        project.key = "PROJ"
+        body = StoryPatch.model_validate({"priority": "low"})
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+
+        with patch("app.services.story._to_story_out") as mock_out, \
+             patch("app.services.story.publish_event"):
+            mock_out.return_value = MagicMock()
+            await update_story(
+                db, story=story, project=project, user=user, membership=membership, body=body
+            )
+            db.commit.assert_awaited_once()
+
+
 # ── Status Auth Rule ──────────────────────────────────────────────────────────
 
 
@@ -186,7 +317,7 @@ class TestStatusAuthRule:
 
     @pytest.mark.asyncio
     async def test_non_assignee_non_owner_cannot_change_status(self):
-        """A member who is neither the assignee nor owner gets 403."""
+        """A member who is neither the reporter, assignee, nor owner gets 403 (edit guard)."""
         from app.schemas.story import StoryPatch
         from app.services.story import update_story
 
@@ -206,7 +337,7 @@ class TestStatusAuthRule:
         db.bind = MagicMock()
         db.bind.dialect.name = "sqlite"
 
-        with pytest.raises(ForbiddenError, match="assignee or the Owner"):
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
             await update_story(
                 db, story=story, project=project, user=user, membership=membership, body=body
             )
@@ -277,8 +408,8 @@ class TestStatusAuthRule:
             db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_unassigned_story_status_change_by_any_member(self):
-        """When story has no assignee, any member can change status."""
+    async def test_unassigned_story_status_change_by_reporter(self):
+        """When story has no assignee, the reporter can change status."""
         from app.schemas.story import StoryPatch
         from app.services.story import update_story
 
@@ -287,8 +418,8 @@ class TestStatusAuthRule:
             assignee_id=None,
             status="todo",
         )
-        user = _user(CHARLIE_ID, "Charlie")
-        membership = _membership(CHARLIE_ID, role="member")
+        user = _user(ALICE_ID)
+        membership = _membership(ALICE_ID, role="member")
         project = MagicMock()
         project.id = PROJECT_ID
         project.key = "PROJ"
@@ -307,6 +438,31 @@ class TestStatusAuthRule:
                 db, story=story, project=project, user=user, membership=membership, body=body
             )
             db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_unassigned_story_status_change_by_non_reporter_forbidden(self):
+        """When story has no assignee, a non-reporter non-owner member gets 403."""
+        from app.schemas.story import StoryPatch
+        from app.services.story import update_story
+
+        story = _fake_story(
+            reporter_id=ALICE_ID,
+            assignee_id=None,
+            status="todo",
+        )
+        user = _user(CHARLIE_ID, "Charlie")
+        membership = _membership(CHARLIE_ID, role="member")
+        project = MagicMock()
+        project.id = PROJECT_ID
+        project.key = "PROJ"
+        body = StoryPatch.model_validate({"status": "in_progress"})
+
+        db = AsyncMock()
+
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
+            await update_story(
+                db, story=story, project=project, user=user, membership=membership, body=body
+            )
 
 
 # ── Empty Patch ───────────────────────────────────────────────────────────────

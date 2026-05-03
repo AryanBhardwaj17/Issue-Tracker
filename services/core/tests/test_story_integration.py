@@ -583,6 +583,105 @@ class TestUpdateStory:
                 db, story=story, project=project, user=user, membership=ms, body=patch
             )
 
+    @pytest.mark.asyncio
+    async def test_member_cannot_edit_another_members_story(self, db: AsyncSession):
+        """A member cannot edit a story they neither created nor are assigned to."""
+        project = await _create_project(db)
+        await _add_member(db, project.id, BOB_ID)
+        await _add_member(db, project.id, CHARLIE_ID, name="Charlie", email="charlie@test.com")
+
+        # Alice creates a story assigned to Bob
+        alice = _alice_user()
+        body = StoryCreate.model_validate({
+            "title": "Alice and Bob only",
+            "priority": "high",
+            "assignee_id": str(BOB_ID),
+        })
+        created = await story_service.create_story(db, project=project, user=alice, body=body)
+
+        from app.repositories import story as story_repo
+
+        story = await story_repo.get_active(db, created.id, project.id)
+
+        # Charlie tries to edit — should be forbidden
+        charlie = CurrentUser(id=CHARLIE_ID, name="Charlie", email="charlie@test.com")
+        ms = _membership(CHARLIE_ID, project.id, "member")
+        patch = StoryPatch.model_validate({"title": "Hijacked"})
+
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
+            await story_service.update_story(
+                db, story=story, project=project, user=charlie, membership=ms, body=patch
+            )
+
+    @pytest.mark.asyncio
+    async def test_reporter_can_edit_own_story(self, db: AsyncSession):
+        """The reporter (creator) can edit their own story."""
+        project = await _create_project(db)
+        await _add_member(db, project.id, BOB_ID)
+
+        bob = _bob_user()
+        body = StoryCreate.model_validate({"title": "Bob's story", "priority": "low"})
+        created = await story_service.create_story(db, project=project, user=bob, body=body)
+
+        from app.repositories import story as story_repo
+
+        story = await story_repo.get_active(db, created.id, project.id)
+        ms = _membership(BOB_ID, project.id, "member")
+        patch = StoryPatch.model_validate({"title": "Updated by Bob"})
+
+        result = await story_service.update_story(
+            db, story=story, project=project, user=bob, membership=ms, body=patch
+        )
+        assert result.title == "Updated by Bob"
+
+    @pytest.mark.asyncio
+    async def test_assignee_can_edit_assigned_story(self, db: AsyncSession):
+        """The assignee can edit the story assigned to them."""
+        project = await _create_project(db)
+        await _add_member(db, project.id, BOB_ID)
+
+        alice = _alice_user()
+        body = StoryCreate.model_validate({
+            "title": "Assigned to Bob",
+            "priority": "high",
+            "assignee_id": str(BOB_ID),
+        })
+        created = await story_service.create_story(db, project=project, user=alice, body=body)
+
+        from app.repositories import story as story_repo
+
+        story = await story_repo.get_active(db, created.id, project.id)
+        bob = _bob_user()
+        ms = _membership(BOB_ID, project.id, "member")
+        patch = StoryPatch.model_validate({"priority": "critical"})
+
+        result = await story_service.update_story(
+            db, story=story, project=project, user=bob, membership=ms, body=patch
+        )
+        assert result.priority == "critical"
+
+    @pytest.mark.asyncio
+    async def test_member_cannot_edit_unassigned_story_by_another(self, db: AsyncSession):
+        """A member cannot edit an unassigned story created by someone else."""
+        project = await _create_project(db)
+        await _add_member(db, project.id, BOB_ID)
+
+        alice = _alice_user()
+        body = StoryCreate.model_validate({"title": "Alice's unassigned", "priority": "low"})
+        created = await story_service.create_story(db, project=project, user=alice, body=body)
+
+        from app.repositories import story as story_repo
+
+        story = await story_repo.get_active(db, created.id, project.id)
+        bob = _bob_user()
+        ms = _membership(BOB_ID, project.id, "member")
+        patch = StoryPatch.model_validate({"title": "Bob tries to edit"})
+
+        with pytest.raises(ForbiddenError, match="reporter, assignee, or project owner"):
+            await story_service.update_story(
+                db, story=story, project=project, user=bob, membership=ms, body=patch
+            )
+
 
 # ── Delete Story ──────────────────────────────────────────────────────────────
 

@@ -621,3 +621,14 @@ export async function uploadImage(file: File): Promise<string> {
   );
   return data.data.url;
 }
+
+// ─── Backward-compat aliases (E4-S3) ─────────────────────────────────────────
+// Our IssuesTable / TaskRows components were written with these names before
+// the E4-S4 rename.  Keep them so we don't have to touch every import site.
+export type Task = TaskOut;
+export type Subtask = SubtaskOut;
+export type TaskAssignee = { id: string; name: string };
+export type TaskPatchBody = TaskPatchPayload;
+
+export const patchTask = updateTask;
+export const patchSubtask = updateSubtask;
