@@ -113,7 +113,15 @@ export function useDeleteSubtask(projectId: string, storyId: string) {
 
 /** @deprecated Use useUpdateTask instead */
 export function useToggleTaskDone(projectId: string, storyId: string) {
-  return useUpdateTask(projectId, storyId);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, body }: { taskId: string; body: TaskPatchPayload }) =>
+      updateTask(projectId, storyId, taskId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", projectId, storyId] });
+    },
+    onError: (err) => toast.error(extractErrorMessage(err, "Failed to update task")),
+  });
 }
 
 /** @deprecated Use useUpdateSubtask instead */
@@ -122,5 +130,13 @@ export function useToggleSubtaskDone(
   parentTaskId: string,
   storyId: string,
 ) {
-  return useUpdateSubtask(projectId, storyId);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ subtaskId, body }: { subtaskId: string; body: TaskPatchPayload }) =>
+      updateSubtask(projectId, parentTaskId, subtaskId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", projectId, storyId] });
+    },
+    onError: (err) => toast.error(extractErrorMessage(err, "Failed to update subtask")),
+  });
 }

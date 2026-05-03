@@ -170,9 +170,9 @@ describe("canToggleIsDone", () => {
       expect(canToggleIsDone(task, OTHER_ID, "member")).toBe(false);
     });
 
-    it("reporter (non-assignee) cannot toggle assigned task", () => {
+    it("reporter (task creator) can toggle assigned task", () => {
       const task = makeTask();
-      expect(canToggleIsDone(task, REPORTER_ID, "member")).toBe(false);
+      expect(canToggleIsDone(task, REPORTER_ID, "member")).toBe(true);
     });
   });
 
