@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStories, useAllEpics } from "@/hooks/useStories";
 import { useFilterBar } from "@/hooks/useFilterBar";
@@ -52,12 +52,9 @@ export default function IssuesPage({
   );
 
   // ── Expand state ───────────────────────────────────────────────────────────
-  const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
-
-  // Reset expanded rows when filters/search/sort/page change
-  useEffect(() => {
-    setExpandedStories(new Set());
-  }, [
+  // ── Expand state ───────────────────────────────────────────────────────────
+  // Compute a stable key from all filter/sort/page state.
+  const filterKey = [
     filters.priority.join(","),
     filters.assigneeId.join(","),
     filters.epicId.join(","),
@@ -65,17 +62,33 @@ export default function IssuesPage({
     sortBy,
     sortOrder,
     page,
-  ]);
+  ].join("|");
+
+  // Store the filter key alongside the expanded set in a single state object so
+  // we can reset the set during render (React "derived state" pattern) without
+  // needing an effect or a ref — both of which trigger ESLint/React-compiler rules.
+  const [{ trackedKey, expandedStories }, setExpandState] = useState({
+    trackedKey: filterKey,
+    expandedStories: new Set<string>(),
+  });
+
+  // When the filter key changes, clear expanded rows.  React will re-render
+  // immediately with an empty set; the current render uses `activeExpanded`.
+  const activeExpanded =
+    trackedKey === filterKey ? expandedStories : new Set<string>();
+  if (trackedKey !== filterKey) {
+    setExpandState({ trackedKey: filterKey, expandedStories: new Set() });
+  }
 
   function toggleExpand(storyId: string) {
-    setExpandedStories((prev) => {
+    setExpandState(({ expandedStories: prev }) => {
       const next = new Set(prev);
       if (next.has(storyId)) {
         next.delete(storyId);
       } else {
         next.add(storyId);
       }
-      return next;
+      return { trackedKey: filterKey, expandedStories: next };
     });
   }
 
@@ -183,7 +196,7 @@ export default function IssuesPage({
           projectId={projectId}
           userId={userId}
           role={role}
-          expandedStories={expandedStories}
+          expandedStories={activeExpanded}
           onToggleExpand={toggleExpand}
           sort={{ sortBy, sortOrder }}
           onSortChange={setSort}
