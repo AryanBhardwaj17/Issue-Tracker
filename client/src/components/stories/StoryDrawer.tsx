@@ -103,7 +103,7 @@ export default function StoryDrawer({ projectId, storyId, open, onClose }: Story
               />
 
               {/* Tasks */}
-              <TasksSection projectId={projectId} storyId={storyId} userRole={userRole} />
+              <TasksSection projectId={projectId} storyId={storyId} userRole={userRole} storyAssignee={story.assignee} />
 
               {/* Comments */}
               <CommentsSection projectId={projectId} storyId={storyId} userRole={userRole} />

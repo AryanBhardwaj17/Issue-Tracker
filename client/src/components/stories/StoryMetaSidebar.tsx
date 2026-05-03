@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import type { Story, StoryPatchPayload } from "@/lib/api";
+import type { Story, StoryPatchPayload, StoryStatus, Priority } from "@/lib/api";
 import { listMembers, type MemberOut } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useEpics } from "@/hooks/useEpics";
@@ -64,7 +64,7 @@ export default function StoryMetaSidebar({
         <Field label="Status">
           <select
             value={story.status}
-            onChange={(e) => onUpdate({ status: e.target.value })}
+            onChange={(e) => onUpdate({ status: e.target.value as StoryStatus })}
             disabled={!canStatus}
             title={!canStatus ? "Only the assignee or owner can change status" : undefined}
             className="w-full rounded border border-gray-200 px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
@@ -81,7 +81,7 @@ export default function StoryMetaSidebar({
         <Field label="Priority">
           <select
             value={story.priority}
-            onChange={(e) => onUpdate({ priority: e.target.value })}
+            onChange={(e) => onUpdate({ priority: e.target.value as Priority })}
             disabled={!canEdit}
             title={!canEdit ? "Only the reporter or owner can edit this field" : undefined}
             className="w-full rounded border border-gray-200 px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"

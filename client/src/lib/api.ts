@@ -261,7 +261,18 @@ export async function deleteEpic(
 
 // ─── Story Types ──────────────────────────────────────────────────────────────
 
-export interface UserRef {
+export type StoryStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "in_review"
+  | "testing"
+  | "ready_for_prod"
+  | "done";
+
+export type Priority = "low" | "medium" | "high" | "critical";
+
+export interface StoryUser {
   id: string;
   name: string;
 }
@@ -272,33 +283,45 @@ export interface Story {
   title: string;
   description: string | null;
   epicId: string | null;
-  status: string;
-  priority: string;
+  status: StoryStatus;
+  priority: Priority;
   storyPoints: number | null;
-  assignee: UserRef | null;
-  reporter: UserRef;
+  assignee: StoryUser | null;
+  reporter: StoryUser;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface StoryCreatePayload {
+export interface StoryFilters {
+  status?: StoryStatus[];
+  priority?: Priority[];
+  epicId?: string[];
+  assigneeId?: string[];
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface StoryCreateBody {
   title: string;
   description?: string | null;
   epicId?: string | null;
-  status?: string;
-  priority: string;
+  status?: StoryStatus;
+  priority: Priority;
   storyPoints?: number | null;
   assigneeId?: string | null;
   dueDate?: string | null;
 }
 
-export interface StoryPatchPayload {
+export interface StoryPatchBody {
   title?: string;
   description?: string | null;
   epicId?: string | null;
-  status?: string;
-  priority?: string;
+  status?: StoryStatus;
+  priority?: Priority;
   storyPoints?: number | null;
   assigneeId?: string | null;
   dueDate?: string | null;
@@ -308,13 +331,24 @@ export interface StoryPatchPayload {
 
 export async function listStories(
   projectId: string,
-  page = 1,
-  pageSize = 25,
-  filters?: { status?: string; priority?: string; epicId?: string; assigneeId?: string },
+  filters: StoryFilters = {},
 ): Promise<PaginatedResult<Story>> {
+  // Build query string manually so arrays serialize as repeated params
+  // (?status=backlog&status=todo) instead of (?status[]=backlog) which FastAPI
+  // won't parse correctly with the alias Query() parameters.
+  const params = new URLSearchParams();
+  params.set("page", String(filters.page ?? 1));
+  params.set("pageSize", String(filters.pageSize ?? 25));
+  if (filters.status?.length) filters.status.forEach((s) => params.append("status", s));
+  if (filters.priority?.length) filters.priority.forEach((p) => params.append("priority", p));
+  if (filters.epicId?.length) filters.epicId.forEach((e) => params.append("epicId", e));
+  if (filters.assigneeId?.length) filters.assigneeId.forEach((a) => params.append("assigneeId", a));
+  if (filters.search) params.set("search", filters.search);
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
+
   const { data } = await api.get<Envelope<Story[]>>(
-    `/projects/${projectId}/stories`,
-    { params: { page, pageSize, ...filters } },
+    `/projects/${projectId}/stories?${params.toString()}`,
   );
   return { items: data.data, pagination: data.pagination! };
 }
@@ -331,7 +365,7 @@ export async function getStory(
 
 export async function createStory(
   projectId: string,
-  body: StoryCreatePayload,
+  body: StoryCreateBody,
 ): Promise<Story> {
   const { data } = await api.post<Envelope<Story>>(
     `/projects/${projectId}/stories`,
@@ -340,10 +374,10 @@ export async function createStory(
   return data.data;
 }
 
-export async function updateStory(
+export async function patchStory(
   projectId: string,
   storyId: string,
-  body: StoryPatchPayload,
+  body: StoryPatchBody,
 ): Promise<Story> {
   const { data } = await api.patch<Envelope<Story>>(
     `/projects/${projectId}/stories/${storyId}`,
@@ -359,7 +393,15 @@ export async function deleteStory(
   await api.delete(`/projects/${projectId}/stories/${storyId}`);
 }
 
+/** Alias used by StoryHeader / StoryMetaSidebar components */
+export type StoryPatchPayload = StoryPatchBody;
+
 // ─── Task Types ───────────────────────────────────────────────────────────────
+
+export interface UserRef {
+  id: string;
+  name: string;
+}
 
 export interface SubtaskOut {
   id: string;
@@ -440,8 +482,8 @@ export async function updateTask(
   storyId: string,
   taskId: string,
   body: TaskPatchPayload,
-): Promise<TaskOut | SubtaskOut> {
-  const { data } = await api.patch<Envelope<TaskOut | SubtaskOut>>(
+): Promise<TaskOut> {
+  const { data } = await api.patch<Envelope<TaskOut>>(
     `/projects/${projectId}/stories/${storyId}/tasks/${taskId}`,
     body,
   );
@@ -455,6 +497,8 @@ export async function deleteTask(
 ): Promise<void> {
   await api.delete(`/projects/${projectId}/stories/${storyId}/tasks/${taskId}`);
 }
+
+// ─── Subtask API ──────────────────────────────────────────────────────────────
 
 export async function createSubtask(
   projectId: string,
@@ -571,9 +615,9 @@ export async function uploadImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
   const { data } = await api.post<Envelope<{ url: string }>>(
-    `/upload/image`,
+    "/upload/image",
     formData,
-    { headers: { "Content-Type": undefined } },
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
   return data.data.url;
 }
