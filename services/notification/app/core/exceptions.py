@@ -1,6 +1,11 @@
 """Domain exception hierarchy for the Notification Service."""
 
-from app.utils.constants import ERR_FORBIDDEN, ERR_INVALID_TOKEN, ERR_NOT_FOUND, ERR_NOT_YOUR_NOTIFICATION
+from app.utils.constants import (
+    ERR_FORBIDDEN,
+    ERR_INVALID_TOKEN,
+    ERR_NOT_FOUND,
+    ERR_NOT_YOUR_NOTIFICATION,
+)
 
 
 class AppException(Exception):

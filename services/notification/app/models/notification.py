@@ -5,16 +5,16 @@ EmailDelivery tracks every outbound email attempt (audit log).
 Notification is the in-app read/unread inbox per user.
 """
 
-import enum
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
     Index,
-    JSON,
     String,
     Text,
 )
@@ -24,7 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
-class DeliveryStatus(str, enum.Enum):
+class DeliveryStatus(StrEnum):
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
