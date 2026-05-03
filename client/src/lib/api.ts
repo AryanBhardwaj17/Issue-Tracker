@@ -258,3 +258,137 @@ export async function deleteEpic(
 ): Promise<void> {
   await api.delete(`/projects/${projectId}/epics/${epicId}`);
 }
+
+// ─── Story Types ──────────────────────────────────────────────────────────────
+
+export type StoryStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "in_review"
+  | "testing"
+  | "ready_for_prod"
+  | "done";
+
+export type Priority = "low" | "medium" | "high" | "critical";
+
+export interface StoryUser {
+  id: string;
+  name: string;
+}
+
+export interface Story {
+  id: string;
+  storyKey: string;
+  title: string;
+  description: string | null;
+  epicId: string | null;
+  status: StoryStatus;
+  priority: Priority;
+  storyPoints: number | null;
+  assignee: StoryUser | null;
+  reporter: StoryUser;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoryFilters {
+  status?: StoryStatus[];
+  priority?: Priority[];
+  epicId?: string[];
+  assigneeId?: string[];
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface StoryCreateBody {
+  title: string;
+  description?: string | null;
+  epicId?: string | null;
+  status?: StoryStatus;
+  priority: Priority;
+  storyPoints?: number | null;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
+export interface StoryPatchBody {
+  title?: string;
+  description?: string | null;
+  epicId?: string | null;
+  status?: StoryStatus;
+  priority?: Priority;
+  storyPoints?: number | null;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
+// ─── Story API ────────────────────────────────────────────────────────────────
+
+export async function listStories(
+  projectId: string,
+  filters: StoryFilters = {},
+): Promise<PaginatedResult<Story>> {
+  // Build query string manually so arrays serialize as repeated params
+  // (?status=backlog&status=todo) instead of (?status[]=backlog) which FastAPI
+  // won't parse correctly with the alias Query() parameters.
+  const params = new URLSearchParams();
+  params.set("page", String(filters.page ?? 1));
+  params.set("pageSize", String(filters.pageSize ?? 25));
+  if (filters.status?.length) filters.status.forEach((s) => params.append("status", s));
+  if (filters.priority?.length) filters.priority.forEach((p) => params.append("priority", p));
+  if (filters.epicId?.length) filters.epicId.forEach((e) => params.append("epicId", e));
+  if (filters.assigneeId?.length) filters.assigneeId.forEach((a) => params.append("assigneeId", a));
+  if (filters.search) params.set("search", filters.search);
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
+
+  const { data } = await api.get<Envelope<Story[]>>(
+    `/projects/${projectId}/stories?${params.toString()}`,
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function getStory(
+  projectId: string,
+  storyId: string,
+): Promise<Story> {
+  const { data } = await api.get<Envelope<Story>>(
+    `/projects/${projectId}/stories/${storyId}`,
+  );
+  return data.data;
+}
+
+export async function createStory(
+  projectId: string,
+  body: StoryCreateBody,
+): Promise<Story> {
+  const { data } = await api.post<Envelope<Story>>(
+    `/projects/${projectId}/stories`,
+    body,
+  );
+  return data.data;
+}
+
+export async function patchStory(
+  projectId: string,
+  storyId: string,
+  body: StoryPatchBody,
+): Promise<Story> {
+  const { data } = await api.patch<Envelope<Story>>(
+    `/projects/${projectId}/stories/${storyId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteStory(
+  projectId: string,
+  storyId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/stories/${storyId}`);
+}
