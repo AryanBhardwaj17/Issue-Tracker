@@ -11,12 +11,12 @@ import {
 } from "@dnd-kit/core";
 import { useProject, useProjectMembers } from "@/hooks/useProject";
 import { useEpics } from "@/hooks/useEpics";
-import { useInfiniteStories, useCreateStory, useUpdateStory } from "@/hooks/useStories";
+import { useInfiniteStories, useCreateStory, useOptimisticPatchStory } from "@/hooks/useStories";
 import { useAuthStore } from "@/stores/authStore";
 import FilterBar, { type BoardFilters } from "@/components/board/FilterBar";
 import KanbanColumn from "@/components/board/KanbanColumn";
 import CreateStoryDialog from "@/components/board/CreateStoryDialog";
-import type { StoryStatus, Story } from "@/lib/api";
+import type { StoryStatus, Story, Priority } from "@/lib/api";
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
@@ -97,10 +97,10 @@ export default function BoardPage({
     ...(filters.search && { search: filters.search }),
     ...(filters.assigneeId && { assigneeId: [filters.assigneeId] }),
     ...(filters.epicId && { epicId: [filters.epicId] }),
-    ...(filters.priority.length > 0 && { priority: filters.priority }),
+    ...(filters.priority.length > 0 && { priority: filters.priority as Priority[] }),
     // If user has selected specific statuses, use those; otherwise fetch all board statuses
-    status: filters.status.length > 0 ? filters.status : ALL_STATUSES,
-    sortBy: "priority" as const,
+    status: (filters.status.length > 0 ? filters.status : ALL_STATUSES) as StoryStatus[],
+    sortBy: "priority",
     sortOrder: "desc" as const,
   };
 
@@ -114,7 +114,7 @@ export default function BoardPage({
   } = useInfiniteStories(projectId, apiFilters);
 
   const createMutation = useCreateStory(projectId);
-  const updateMutation = useUpdateStory(projectId, apiFilters);
+  const updateMutation = useOptimisticPatchStory(projectId, apiFilters);
 
   // Flatten all pages
   const allStories: Story[] = data?.pages.flatMap((p) => p.items) ?? [];

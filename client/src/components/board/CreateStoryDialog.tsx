@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { MemberOut, Epic, StoryPriority } from "@/lib/api";
+import type { MemberOut, Epic, Priority } from "@/lib/api";
 
 const FIBONACCI = [1, 2, 3, 5, 8, 13, 21];
 
@@ -9,7 +9,7 @@ interface CreateStoryDialogProps {
   onClose: () => void;
   onSubmit: (body: {
     title: string;
-    priority: StoryPriority;
+    priority: Priority;
     epicId: string | null;
     assigneeId: string | null;
     storyPoints: number | null;
@@ -30,7 +30,7 @@ export default function CreateStoryDialog({
   epics,
 }: CreateStoryDialogProps) {
   const [title, setTitle] = useState("");
-  const [priority, setPriority] = useState<StoryPriority>("medium");
+  const [priority, setPriority] = useState<Priority>("medium");
   const [epicId, setEpicId] = useState<string | null>(null);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [storyPoints, setStoryPoints] = useState<number | null>(null);
@@ -134,7 +134,7 @@ export default function CreateStoryDialog({
             </label>
             <select
               value={priority}
-              onChange={(e) => setPriority(e.target.value as StoryPriority)}
+              onChange={(e) => setPriority(e.target.value as Priority)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
               <option value="critical">Critical</option>

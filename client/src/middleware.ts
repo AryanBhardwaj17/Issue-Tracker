@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * to /api/v1/auth by the backend, so it's invisible to page navigations.
  */
 
-export function middleware(_request: NextRequest) {
+export function middleware(_: NextRequest) {
   return NextResponse.next();
 }
 

@@ -11,7 +11,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = sessionStorage.getItem("access_token");
+      const token = sessionStorage.getItem("it_access_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -37,11 +37,11 @@ api.interceptors.response.use(
 
       try {
         const { data } = await api.post("/auth/refresh");
-        sessionStorage.setItem("access_token", data.access_token);
+        sessionStorage.setItem("it_access_token", data.access_token);
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
         return api(originalRequest);
       } catch {
-        sessionStorage.removeItem("access_token");
+        sessionStorage.removeItem("it_access_token");
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }

@@ -30,8 +30,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await loginUser({ email, password });
-      sessionStorage.setItem("access_token", data.access_token);
-      sessionStorage.setItem("user", JSON.stringify(data.user));
+      sessionStorage.setItem("it_access_token", data.access_token);
+      sessionStorage.setItem("it_user", JSON.stringify(data.user));
       set({ user: data.user, isLoading: false });
       return true;
     } catch (error: unknown) {
@@ -59,15 +59,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // Proceed even if server logout fails
     } finally {
-      sessionStorage.removeItem("access_token");
-      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("it_access_token");
+      sessionStorage.removeItem("it_user");
       set({ user: null, error: null });
     }
   },
 
   hydrate: async () => {
-    const token = sessionStorage.getItem("access_token");
-    const userRaw = sessionStorage.getItem("user");
+    const token = sessionStorage.getItem("it_access_token");
+    const userRaw = sessionStorage.getItem("it_user");
     if (!token || !userRaw) {
       set({ isHydrated: true });
       return;
@@ -76,8 +76,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user: User = JSON.parse(userRaw);
       set({ user, isHydrated: true });
     } catch {
-      sessionStorage.removeItem("access_token");
-      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("it_access_token");
+      sessionStorage.removeItem("it_user");
       set({ isHydrated: true });
     }
   },
