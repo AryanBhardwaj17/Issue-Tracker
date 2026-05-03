@@ -39,7 +39,7 @@ services:
       timeout: 5s
       retries: 5
 
-  notifcations-db:
+  notifications-db:
     image: postgres:16-alpine
     container_name: notifications-db
     environment:
@@ -74,12 +74,14 @@ services:
         condition: service_started
       core-service:
         condition: service_started
+      notification-service:
+        condition: service_started
     networks:
       - issue-tracker-net
 
   # ── Message bus ──────────────────────────────────────────────────────────────
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3.13-management
     container_name: rabbitmq
     restart: unless-stopped
 
@@ -99,6 +101,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - issue-tracker-net
 
 # Auth service 
 
@@ -155,6 +166,31 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  notification-service:
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+    container_name: notification-service
+    env_file:
+      - ./services/notification/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://notifications_user:notifications_pass@notifications-db:5432/notifications_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_USE_TLS: "false"
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: text
+    ports:
+      - "8003:8000"
+    depends_on:
+      notifications-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - issue-tracker-net
 
 # ── Named volumes ─────────────────────────────────────────────────────────────
 
