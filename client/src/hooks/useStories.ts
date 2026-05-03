@@ -1,4 +1,5 @@
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -12,14 +13,32 @@ import {
   listEpics,
   listStories,
   patchStory,
+  type PaginatedResult,
+  type Story,
   type StoryCreateBody,
   type StoryFilters,
   type StoryPatchBody,
 } from "@/lib/api";
+import type { InfiniteData } from "@tanstack/react-query";
 import { extractErrorMessage } from "@/lib/errors";
 import { invalidateStoryRelated } from "@/lib/query-helpers";
 
 // ─── Read hooks ───────────────────────────────────────────────────────────────
+
+export function useInfiniteStories(projectId: string, filters: StoryFilters = {}) {
+  return useInfiniteQuery({
+    queryKey: ["stories", projectId, filters],
+    queryFn: ({ pageParam }) =>
+      listStories(projectId, { ...filters, page: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: PaginatedResult<Story>) => {
+      const { page, totalPages } = lastPage.pagination;
+      return page < totalPages ? page + 1 : undefined;
+    },
+    enabled: !!projectId,
+    staleTime: 30_000,
+  });
+}
 
 export function useStories(projectId: string, filters: StoryFilters = {}) {
   return useQuery({
@@ -67,6 +86,52 @@ export function usePatchStory(projectId: string) {
       invalidateStoryRelated(qc, projectId, variables.storyId);
     },
     onError: (err) => toast.error(extractErrorMessage(err, "Failed to update story")),
+  });
+}
+
+/** Alias kept for backward-compat with board page. */
+export const useUpdateStory = usePatchStory;
+
+/**
+ * Optimistic-update variant used by the Kanban board drag-drop.
+ * Immediately moves the card in the infinite-query cache, then
+ * rolls back on error.
+ */
+export function useOptimisticPatchStory(
+  projectId: string,
+  filters: StoryFilters,
+) {
+  const qc = useQueryClient();
+  const qKey = ["stories", projectId, filters] as const;
+  return useMutation({
+    mutationFn: ({ storyId, body }: { storyId: string; body: StoryPatchBody }) =>
+      patchStory(projectId, storyId, body),
+    onMutate: async ({ storyId, body }) => {
+      await qc.cancelQueries({ queryKey: qKey });
+      const previous = qc.getQueryData<InfiniteData<PaginatedResult<Story>>>(qKey);
+      if (previous && body.status) {
+        qc.setQueryData<InfiniteData<PaginatedResult<Story>>>(qKey, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((s) =>
+                s.id === storyId ? { ...s, status: body.status! } : s,
+              ),
+            })),
+          };
+        });
+      }
+      return { previous };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(qKey, ctx.previous);
+      toast.error(extractErrorMessage(err, "Failed to update story"));
+    },
+    onSettled: () => {
+      invalidateStoryRelated(qc, projectId);
+    },
   });
 }
 
