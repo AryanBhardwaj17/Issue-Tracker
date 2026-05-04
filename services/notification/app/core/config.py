@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 1025
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM: str = "noreply@issuetracker.local"
+    SMTP_FROM: str = "noreply@issuetracker.dev"
     SMTP_USE_TLS: bool = False
 
     # ── Frontend URL (used in email links) ──────────────────────────────
