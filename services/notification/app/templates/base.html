@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f5f7; color: #333;">
+  <div style="max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
+    <!-- Header -->
+    <div style="background: #1e293b; padding: 16px 24px;">
+      <span style="color: #ffffff; font-size: 16px; font-weight: 600;">Issue Tracker</span>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 24px;">
+      {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+        This is an automated notification from Issue Tracker.<br>
+        You received this because of your project membership.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
