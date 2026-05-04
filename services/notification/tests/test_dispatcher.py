@@ -13,8 +13,8 @@ from app.events.constants import (
     EVENT_STORY_UNASSIGNED,
 )
 
-from conftest import (
-    TestSessionLocal,
+from tests.conftest import TestSessionLocal
+from tests.factories import (
     make_comment_created_payload,
     make_member_added_payload,
     make_ownership_transferred_payload,
