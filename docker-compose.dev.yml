@@ -180,6 +180,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://notifications_user:notifications_pass@notifications-db:5432/notifications_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      SMTP_HOST: mailhog
       LOG_LEVEL: DEBUG
       LOG_FORMAT: text
     ports:

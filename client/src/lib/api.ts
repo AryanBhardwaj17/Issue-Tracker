@@ -622,6 +622,54 @@ export async function uploadImage(file: File): Promise<string> {
   return data.data.url;
 }
 
+// ─── Notification Types ───────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  event_type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+// ─── Notification API ─────────────────────────────────────────────────────────
+
+export async function fetchNotifications(
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedResult<NotificationItem>> {
+  const { data } = await api.get<Envelope<NotificationItem[]>>("/notifications/", {
+    params: { page, pageSize },
+  });
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function fetchUnreadCount(): Promise<number> {
+  const { data } = await api.get<Envelope<{ unreadCount: number }>>(
+    "/notifications/unread-count",
+  );
+  return data.data.unreadCount;
+}
+
+export async function markNotificationRead(
+  notificationId: string,
+): Promise<NotificationItem> {
+  const { data } = await api.patch<Envelope<NotificationItem>>(
+    `/notifications/${notificationId}/read`,
+  );
+  return data.data;
+}
+
+export async function markAllNotificationsRead(): Promise<number> {
+  const { data } = await api.post<Envelope<{ updatedCount: number }>>(
+    "/notifications/mark-all-read",
+  );
+  return data.data.updatedCount;
+}
+
 // ─── Backward-compat aliases (E4-S3) ─────────────────────────────────────────
 // Our IssuesTable / TaskRows components were written with these names before
 // the E4-S4 rename.  Keep them so we don't have to touch every import site.

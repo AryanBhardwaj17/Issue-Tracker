@@ -1,9 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import IssuesTable from "@/components/issues/IssuesTable";
 import type { Story } from "@/lib/api";
 import type { SortField, SortOrder } from "@/components/issues/IssuesTable";
+
+// ─── Mock next/navigation ────────────────────────────────────────────────────
+
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush, replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 // ─── Mock child components to keep tests focused ─────────────────────────────
 
@@ -23,7 +32,7 @@ vi.mock("@/components/stories/PriorityBadge", () => ({
 
 vi.mock("@/components/stories/DueDate", () => ({
   __esModule: true,
-  default: ({ dueDate, isDone }: { dueDate: string | null; isDone: boolean }) => (
+  default: ({ dueDate }: { dueDate: string | null; isDone: boolean }) => (
     <span data-testid="due-date">{dueDate ?? "—"}</span>
   ),
 }));
@@ -223,21 +232,19 @@ describe("IssuesTable", () => {
     expect(onToggleExpand).toHaveBeenCalledWith("story-1");
   });
 
-  it("calls onToggleExpand when row is clicked", async () => {
+  it("navigates to story detail when row is clicked", async () => {
     const user = userEvent.setup();
-    const onToggleExpand = vi.fn();
-    const stories = [makeStory({ title: "Click me" })];
+    const stories = [makeStory({ id: "story-1", title: "Click me" })];
 
     render(
       <IssuesTable
         stories={stories}
         {...defaultProps()}
-        onToggleExpand={onToggleExpand}
       />,
     );
 
     await user.click(screen.getByText("Click me"));
-    expect(onToggleExpand).toHaveBeenCalledWith("story-1");
+    expect(mockPush).toHaveBeenCalledWith("/projects/proj-1/stories/story-1");
   });
 
   it("renders TaskRows when story is expanded", () => {
