@@ -1,6 +1,7 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
+import { useRouter } from "next/navigation";
 import type { Story } from "@/lib/api";
 import StatusBadge from "@/components/stories/StatusBadge";
 import PriorityBadge from "@/components/stories/PriorityBadge";
@@ -153,6 +154,7 @@ function StoryRow({
   userId,
   role,
 }: StoryRowProps) {
+  const router = useRouter();
   const isOverdue =
     story.dueDate &&
     story.status !== "done" &&
@@ -163,7 +165,7 @@ function StoryRow({
     <>
       <tr
         className={`group cursor-pointer transition-colors hover:bg-gray-50 ${isOverdue ? "bg-red-50/40" : ""}`}
-        onClick={onToggleExpand}
+        onClick={() => router.push(`/projects/${projectId}/stories/${story.id}`)}
       >
         {/* Expand chevron */}
         <td className="px-4 py-3">
