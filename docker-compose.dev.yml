@@ -96,6 +96,9 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
+    networks:
+      - issue-tracker-net
+
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
