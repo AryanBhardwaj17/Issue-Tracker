@@ -40,6 +40,7 @@ export default function StoryHeader({
   onDeleteClick,
   userRole,
 }: StoryHeaderProps) {
+  void _projectId;
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
   const canEdit = currentUser ? canModifyStory(story, currentUser.id, userRole) : false;
