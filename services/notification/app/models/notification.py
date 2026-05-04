@@ -46,7 +46,11 @@ class EmailDelivery(Base):
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[DeliveryStatus] = mapped_column(
-        Enum(DeliveryStatus, name="delivery_status"),
+        Enum(
+            DeliveryStatus,
+            name="delivery_status",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
         nullable=False,
         default=DeliveryStatus.PENDING,
         server_default="pending",
