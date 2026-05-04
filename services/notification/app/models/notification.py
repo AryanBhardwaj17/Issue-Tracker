@@ -39,14 +39,16 @@ class EmailDelivery(Base):
         Index("ix_email_deliveries_created_at", "created_at"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[DeliveryStatus] = mapped_column(
-        Enum(DeliveryStatus, name="delivery_status"),
+        Enum(
+            DeliveryStatus,
+            name="delivery_status",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
         nullable=False,
         default=DeliveryStatus.PENDING,
         server_default="pending",
@@ -74,9 +76,7 @@ class Notification(Base):
         Index("ix_notifications_user_read_created", "user_id", "is_read", "created_at"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -93,4 +93,3 @@ class Notification(Base):
 
     def __repr__(self) -> str:
         return f"<Notification id={self.id} user_id={self.user_id} is_read={self.is_read}>"
-

@@ -125,11 +125,14 @@ test:notification:
   services:
     - name: postgres:16-alpine
       alias: notification-db
+    - name: rabbitmq:3.13-alpine
+      alias: rabbitmq
   variables:
     POSTGRES_USER: notification_user
     POSTGRES_PASSWORD: notification_pass
     POSTGRES_DB: notification_db
     DATABASE_URL: postgresql+asyncpg://notification_user:notification_pass@notification-db:5432/notification_db
+    RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
   script:
     - cd services/notification
     - |
@@ -138,6 +141,8 @@ test:notification:
         exit 0
       fi
     - pip install ".[dev]"
+    - echo "Waiting for RabbitMQ to be ready..."
+    - until python -c "import aio_pika, asyncio; asyncio.run(aio_pika.connect('$RABBITMQ_URL'))" 2>/dev/null; do sleep 2; done
     - |
       if find tests/ -name "test_*.py" | grep -q .; then
         pytest tests/ -v

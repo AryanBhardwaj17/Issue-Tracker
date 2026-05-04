@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 style="color: #1a1a1a; font-size: 18px; margin-top: 0;">Added to Project</h2>
+<p>Hi {{ recipient_name }},</p>
+<p><strong>{{ payload.actor_name }}</strong> added you to the project
+   <strong>{{ payload.project_name }}</strong>.</p>
+<p style="margin-top: 24px;">
+  <a href="{{ link }}"
+     style="background: #2563eb; color: #ffffff; padding: 10px 20px; border-radius: 6px;
+            text-decoration: none; font-size: 14px; display: inline-block;">
+    Open Project
+  </a>
+</p>
+{% endblock %}

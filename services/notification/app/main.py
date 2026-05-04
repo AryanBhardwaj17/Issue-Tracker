@@ -77,8 +77,7 @@ async def validation_exception_handler(
     logger = logging.getLogger(__name__)
     logger.warning("Validation error on %s: %s", request.url.path, exc.errors())
     errors = [
-        {"field": ".".join(str(loc) for loc in e["loc"]), "message": e["msg"]}
-        for e in exc.errors()
+        {"field": ".".join(str(loc) for loc in e["loc"]), "message": e["msg"]} for e in exc.errors()
     ]
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

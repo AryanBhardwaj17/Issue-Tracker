@@ -66,8 +66,14 @@ def configure_logging() -> None:
     root.addHandler(handler)
     root.setLevel(level)
 
-    for noisy in ("asyncio", "aio_pika", "aiormq", "sqlalchemy.engine",
-                  "sqlalchemy.pool", "uvicorn.access"):
+    for noisy in (
+        "asyncio",
+        "aio_pika",
+        "aiormq",
+        "sqlalchemy.engine",
+        "sqlalchemy.pool",
+        "uvicorn.access",
+    ):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
     logging.getLogger(__name__).debug(
