@@ -22,7 +22,7 @@ from app.events.consumer import (
 from app.services.dispatcher import dispatch
 
 EXCHANGE_NAME = "domain-events"
-CONSUMER_START_DELAY = 1.5   # seconds to let consumer connect before publishing
+CONSUMER_START_DELAY = 1.5  # seconds to let consumer connect before publishing
 MESSAGE_PROCESS_DELAY = 2.0  # seconds to wait for ack after publish
 
 

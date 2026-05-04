@@ -52,9 +52,7 @@ async def dispatch(
     """
     handler_entry = _EVENT_HANDLERS.get(event_type)
     if handler_entry is None:
-        logger.warning(
-            "Unknown event_type '%s' — skipping (event_id=%s)", event_type, event_id
-        )
+        logger.warning("Unknown event_type '%s' — skipping (event_id=%s)", event_type, event_id)
         return
 
     model_cls, handler_fn = handler_entry
@@ -73,9 +71,7 @@ async def dispatch(
         try:
             await handler_fn(parsed, db, event_id=event_id)
             await db.commit()
-            logger.info(
-                "Dispatched event [%s] id=%s — committed", event_type, event_id
-            )
+            logger.info("Dispatched event [%s] id=%s — committed", event_type, event_id)
         except Exception:
             await db.rollback()
             logger.exception(

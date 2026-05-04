@@ -28,7 +28,8 @@ async def handle_story_unassigned(
     """
     if payload.previous_assignee_id == payload.actor_id:
         logger.info(
-            "story.unassigned: previous_assignee == actor (%s) — skipping notification (event_id=%s)",
+            "story.unassigned: previous_assignee == actor (%s)"
+            " — skipping notification (event_id=%s)",
             payload.actor_id,
             event_id,
         )
@@ -40,7 +41,7 @@ async def handle_story_unassigned(
 
     title = f"Story unassigned: {payload.story_key}"
     body = (
-        f"{payload.actor_name} unassigned you from \"{payload.story_title}\" "
+        f'{payload.actor_name} unassigned you from "{payload.story_title}" '
         f"in {payload.project_name}."
     )
     link = f"/projects/{payload.project_id}/stories/{payload.story_id}"

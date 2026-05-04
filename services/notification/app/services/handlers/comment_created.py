@@ -58,7 +58,7 @@ async def handle_comment_created(
 
         title = f"New comment on {payload.story_key}"
         body_text = (
-            f"{payload.comment_author_name} commented on \"{payload.story_title}\": "
+            f'{payload.comment_author_name} commented on "{payload.story_title}": '
             f"{payload.comment_body_excerpt}"
         )
         link = f"/projects/{payload.project_id}/stories/{payload.story_id}"

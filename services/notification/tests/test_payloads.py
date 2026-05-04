@@ -1,7 +1,5 @@
 """Unit tests for inbound event payload Pydantic models."""
 
-import uuid
-
 import pytest
 from pydantic import ValidationError
 
@@ -12,7 +10,6 @@ from app.events.payloads import (
     StoryAssignedPayload,
     StoryUnassignedPayload,
 )
-
 from tests.factories import (
     make_comment_created_payload,
     make_member_added_payload,
@@ -20,7 +17,6 @@ from tests.factories import (
     make_story_assigned_payload,
     make_story_unassigned_payload,
 )
-
 
 # ── MemberAddedPayload ──────────────────────────────────────────────────────
 
@@ -33,11 +29,19 @@ class TestMemberAddedPayload:
         assert p.added_user_email == "bob@test.com"
         assert p.actor_name == "Alice"
 
-    @pytest.mark.parametrize("missing_field", [
-        "project_id", "project_name", "project_key",
-        "added_user_id", "added_user_email", "added_user_name",
-        "actor_id", "actor_name",
-    ])
+    @pytest.mark.parametrize(
+        "missing_field",
+        [
+            "project_id",
+            "project_name",
+            "project_key",
+            "added_user_id",
+            "added_user_email",
+            "added_user_name",
+            "actor_id",
+            "actor_name",
+        ],
+    )
     def test_missing_required_field(self, missing_field):
         data = make_member_added_payload()
         del data[missing_field]
@@ -60,12 +64,19 @@ class TestOwnershipTransferredPayload:
         assert p.new_owner_email == "charlie@test.com"
         assert p.previous_owner_name == "Alice"
 
-    @pytest.mark.parametrize("missing_field", [
-        "project_id", "project_name",
-        "new_owner_id", "new_owner_email", "new_owner_name",
-        "previous_owner_id", "previous_owner_name",
-        "actor_id",
-    ])
+    @pytest.mark.parametrize(
+        "missing_field",
+        [
+            "project_id",
+            "project_name",
+            "new_owner_id",
+            "new_owner_email",
+            "new_owner_name",
+            "previous_owner_id",
+            "previous_owner_name",
+            "actor_id",
+        ],
+    )
     def test_missing_required_field(self, missing_field):
         data = make_ownership_transferred_payload()
         del data[missing_field]
@@ -83,11 +94,21 @@ class TestStoryAssignedPayload:
         assert p.story_key == "TP-42"
         assert p.assignee_name == "Bob"
 
-    @pytest.mark.parametrize("missing_field", [
-        "project_id", "project_name", "story_id", "story_key", "story_title",
-        "assignee_id", "assignee_email", "assignee_name",
-        "actor_id", "actor_name",
-    ])
+    @pytest.mark.parametrize(
+        "missing_field",
+        [
+            "project_id",
+            "project_name",
+            "story_id",
+            "story_key",
+            "story_title",
+            "assignee_id",
+            "assignee_email",
+            "assignee_name",
+            "actor_id",
+            "actor_name",
+        ],
+    )
     def test_missing_required_field(self, missing_field):
         data = make_story_assigned_payload()
         del data[missing_field]
@@ -105,11 +126,21 @@ class TestStoryUnassignedPayload:
         assert p.story_key == "TP-42"
         assert p.previous_assignee_name == "Bob"
 
-    @pytest.mark.parametrize("missing_field", [
-        "project_id", "project_name", "story_id", "story_key", "story_title",
-        "previous_assignee_id", "previous_assignee_email", "previous_assignee_name",
-        "actor_id", "actor_name",
-    ])
+    @pytest.mark.parametrize(
+        "missing_field",
+        [
+            "project_id",
+            "project_name",
+            "story_id",
+            "story_key",
+            "story_title",
+            "previous_assignee_id",
+            "previous_assignee_email",
+            "previous_assignee_name",
+            "actor_id",
+            "actor_name",
+        ],
+    )
     def test_missing_required_field(self, missing_field):
         data = make_story_unassigned_payload()
         del data[missing_field]
@@ -131,7 +162,9 @@ class TestCommentCreatedPayload:
     def test_valid_payload_without_assignee(self):
         """Assignee fields are optional — story may have no assignee."""
         data = make_comment_created_payload(
-            assignee_id=None, assignee_email=None, assignee_name=None,
+            assignee_id=None,
+            assignee_email=None,
+            assignee_name=None,
         )
         p = CommentCreatedPayload.model_validate(data)
         assert p.assignee_id is None
@@ -147,12 +180,23 @@ class TestCommentCreatedPayload:
         p = CommentCreatedPayload.model_validate(data)
         assert p.assignee_id is None
 
-    @pytest.mark.parametrize("missing_field", [
-        "project_id", "project_name", "story_id", "story_key", "story_title",
-        "comment_id", "comment_author_id", "comment_author_name",
-        "comment_body_excerpt",
-        "reporter_id", "reporter_email", "reporter_name",
-    ])
+    @pytest.mark.parametrize(
+        "missing_field",
+        [
+            "project_id",
+            "project_name",
+            "story_id",
+            "story_key",
+            "story_title",
+            "comment_id",
+            "comment_author_id",
+            "comment_author_name",
+            "comment_body_excerpt",
+            "reporter_id",
+            "reporter_email",
+            "reporter_name",
+        ],
+    )
     def test_missing_required_field(self, missing_field):
         data = make_comment_created_payload()
         del data[missing_field]

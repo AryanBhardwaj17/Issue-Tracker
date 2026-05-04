@@ -40,8 +40,7 @@ async def handle_story_assigned(
 
     title = f"Story assigned: {payload.story_key}"
     body = (
-        f"{payload.actor_name} assigned you to \"{payload.story_title}\" "
-        f"in {payload.project_name}."
+        f'{payload.actor_name} assigned you to "{payload.story_title}" in {payload.project_name}.'
     )
     link = f"/projects/{payload.project_id}/stories/{payload.story_id}"
 

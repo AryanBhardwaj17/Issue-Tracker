@@ -12,7 +12,6 @@ from app.events.constants import (
     EVENT_STORY_ASSIGNED,
     EVENT_STORY_UNASSIGNED,
 )
-
 from tests.conftest import TestSessionLocal
 from tests.factories import (
     make_comment_created_payload,
@@ -21,7 +20,6 @@ from tests.factories import (
     make_story_assigned_payload,
     make_story_unassigned_payload,
 )
-
 
 EVENT_ID = str(uuid.uuid4())
 TIMESTAMP = "2026-05-04T10:00:00Z"
@@ -38,15 +36,42 @@ def _patch_session_local():
 
 
 class TestDispatchRouting:
-    @pytest.mark.parametrize("event_type,payload_factory,handler_path", [
-        (EVENT_MEMBER_ADDED, make_member_added_payload, "app.services.handlers.handle_member_added"),
-        (EVENT_OWNERSHIP_TRANSFERRED, make_ownership_transferred_payload, "app.services.handlers.handle_ownership_transferred"),
-        (EVENT_STORY_ASSIGNED, make_story_assigned_payload, "app.services.handlers.handle_story_assigned"),
-        (EVENT_STORY_UNASSIGNED, make_story_unassigned_payload, "app.services.handlers.handle_story_unassigned"),
-        (EVENT_COMMENT_CREATED, make_comment_created_payload, "app.services.handlers.handle_comment_created"),
-    ])
+    @pytest.mark.parametrize(
+        "event_type,payload_factory,handler_path",
+        [
+            (
+                EVENT_MEMBER_ADDED,
+                make_member_added_payload,
+                "app.services.handlers.handle_member_added",
+            ),
+            (
+                EVENT_OWNERSHIP_TRANSFERRED,
+                make_ownership_transferred_payload,
+                "app.services.handlers.handle_ownership_transferred",
+            ),
+            (
+                EVENT_STORY_ASSIGNED,
+                make_story_assigned_payload,
+                "app.services.handlers.handle_story_assigned",
+            ),
+            (
+                EVENT_STORY_UNASSIGNED,
+                make_story_unassigned_payload,
+                "app.services.handlers.handle_story_unassigned",
+            ),
+            (
+                EVENT_COMMENT_CREATED,
+                make_comment_created_payload,
+                "app.services.handlers.handle_comment_created",
+            ),
+        ],
+    )
     async def test_known_event_calls_correct_handler(
-        self, event_type, payload_factory, handler_path, mock_send_email,
+        self,
+        event_type,
+        payload_factory,
+        handler_path,
+        mock_send_email,
     ):
         from app.services.dispatcher import dispatch
 
@@ -63,6 +88,7 @@ class TestDispatchRouting:
 
         # Verify rows were committed
         from sqlalchemy import select
+
         from app.models.notification import EmailDelivery, Notification
 
         async with TestSessionLocal() as db:
@@ -90,6 +116,7 @@ class TestUnknownEvent:
         await dispatch("totally.unknown.event", EVENT_ID, TIMESTAMP, {"foo": "bar"})
 
         from sqlalchemy import select
+
         from app.models.notification import EmailDelivery, Notification
 
         async with TestSessionLocal() as db:
@@ -116,6 +143,7 @@ class TestInvalidPayload:
         await dispatch(EVENT_MEMBER_ADDED, EVENT_ID, TIMESTAMP, {})
 
         from sqlalchemy import select
+
         from app.models.notification import EmailDelivery, Notification
 
         async with TestSessionLocal() as db:
@@ -133,6 +161,7 @@ class TestInvalidPayload:
         await dispatch(EVENT_MEMBER_ADDED, EVENT_ID, TIMESTAMP, partial)
 
         from sqlalchemy import select
+
         from app.models.notification import Notification
 
         async with TestSessionLocal() as db:
@@ -151,10 +180,14 @@ class TestHandlerError:
 
         with patch(
             "app.services.dispatcher._EVENT_HANDLERS",
-            {EVENT_MEMBER_ADDED: (
-                __import__("app.events.payloads", fromlist=["MemberAddedPayload"]).MemberAddedPayload,
-                AsyncMock(side_effect=RuntimeError("DB exploded")),
-            )},
+            {
+                EVENT_MEMBER_ADDED: (
+                    __import__(
+                        "app.events.payloads", fromlist=["MemberAddedPayload"]
+                    ).MemberAddedPayload,
+                    AsyncMock(side_effect=RuntimeError("DB exploded")),
+                )
+            },
         ):
             with pytest.raises(RuntimeError, match="DB exploded"):
                 await dispatch(EVENT_MEMBER_ADDED, EVENT_ID, TIMESTAMP, payload)
@@ -166,12 +199,10 @@ class TestHandlerError:
         payload = make_member_added_payload()
 
         # Wrap handler to raise AFTER it adds rows
-        original_handler = (
-            __import__(
-                "app.services.handlers.member_added",
-                fromlist=["handle_member_added"],
-            ).handle_member_added
-        )
+        original_handler = __import__(
+            "app.services.handlers.member_added",
+            fromlist=["handle_member_added"],
+        ).handle_member_added
 
         async def exploding_handler(p, db, *, event_id):
             await original_handler(p, db, event_id=event_id)
@@ -179,16 +210,21 @@ class TestHandlerError:
 
         with patch(
             "app.services.dispatcher._EVENT_HANDLERS",
-            {EVENT_MEMBER_ADDED: (
-                __import__("app.events.payloads", fromlist=["MemberAddedPayload"]).MemberAddedPayload,
-                exploding_handler,
-            )},
+            {
+                EVENT_MEMBER_ADDED: (
+                    __import__(
+                        "app.events.payloads", fromlist=["MemberAddedPayload"]
+                    ).MemberAddedPayload,
+                    exploding_handler,
+                )
+            },
         ):
             with pytest.raises(RuntimeError, match="Boom"):
                 await dispatch(EVENT_MEMBER_ADDED, EVENT_ID, TIMESTAMP, payload)
 
         # Rows should have been rolled back
         from sqlalchemy import select
+
         from app.models.notification import EmailDelivery, Notification
 
         async with TestSessionLocal() as db:

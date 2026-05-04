@@ -33,8 +33,7 @@ async def handle_ownership_transferred(
 
     title = f"You are now the owner of {payload.project_name}"
     body = (
-        f"{payload.previous_owner_name} transferred ownership of "
-        f"\"{payload.project_name}\" to you."
+        f'{payload.previous_owner_name} transferred ownership of "{payload.project_name}" to you.'
     )
     link = f"/projects/{payload.project_id}/settings"
 

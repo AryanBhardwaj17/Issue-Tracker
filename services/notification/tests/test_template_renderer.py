@@ -1,7 +1,5 @@
 """Unit tests for the Jinja2 template renderer — rendering, XSS escaping, excerpt ellipsis."""
 
-import pytest
-
 from app.events.payloads import (
     CommentCreatedPayload,
     MemberAddedPayload,
@@ -10,7 +8,6 @@ from app.events.payloads import (
     StoryUnassignedPayload,
 )
 from app.services.template_renderer import render_template
-
 from tests.factories import (
     make_comment_created_payload,
     make_member_added_payload,
@@ -18,7 +15,6 @@ from tests.factories import (
     make_story_assigned_payload,
     make_story_unassigned_payload,
 )
-
 
 FRONTEND_URL = "http://localhost:3000"
 
@@ -42,9 +38,7 @@ class TestTemplatesRender:
         assert "Open Project" in html
 
     def test_ownership_transferred_renders(self):
-        payload = OwnershipTransferredPayload.model_validate(
-            make_ownership_transferred_payload()
-        )
+        payload = OwnershipTransferredPayload.model_validate(make_ownership_transferred_payload())
         html = render_template(
             "ownership_transferred.html",
             payload=payload,
@@ -116,7 +110,7 @@ class TestXSSEscaping:
         assert "&lt;script&gt;" in html
 
     def test_xss_in_story_title_escaped(self):
-        data = make_story_assigned_payload(story_title='<img src=x onerror=alert(1)>')
+        data = make_story_assigned_payload(story_title="<img src=x onerror=alert(1)>")
         payload = StoryAssignedPayload.model_validate(data)
         html = render_template(
             "story_assigned.html",
@@ -140,7 +134,7 @@ class TestXSSEscaping:
         assert "&lt;b " in html
 
     def test_xss_in_recipient_name_escaped(self):
-        data = make_member_added_payload(added_user_name='<script>steal()</script>')
+        data = make_member_added_payload(added_user_name="<script>steal()</script>")
         payload = MemberAddedPayload.model_validate(data)
         html = render_template(
             "member_added.html",
@@ -152,9 +146,7 @@ class TestXSSEscaping:
         assert "&lt;script&gt;" in html
 
     def test_xss_in_comment_body_escaped(self):
-        data = make_comment_created_payload(
-            comment_body_excerpt='<script>document.cookie</script>'
-        )
+        data = make_comment_created_payload(comment_body_excerpt="<script>document.cookie</script>")
         payload = CommentCreatedPayload.model_validate(data)
         html = render_template(
             "comment_created.html",
@@ -166,9 +158,7 @@ class TestXSSEscaping:
         assert "&lt;script&gt;" in html
 
     def test_xss_in_previous_owner_name_escaped(self):
-        data = make_ownership_transferred_payload(
-            previous_owner_name='<div onclick="hack()">'
-        )
+        data = make_ownership_transferred_payload(previous_owner_name='<div onclick="hack()">')
         payload = OwnershipTransferredPayload.model_validate(data)
         html = render_template(
             "ownership_transferred.html",

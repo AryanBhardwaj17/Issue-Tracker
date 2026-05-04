@@ -31,6 +31,7 @@ def get_last_message_at() -> datetime | None:
 
 # ── Internal consumer loop ────────────────────────────────────────────────────
 
+
 async def _consume(dispatch_fn) -> None:  # noqa: ANN001
     """Connect to RabbitMQ, declare topology, and consume messages indefinitely."""
     global _consumer_status, _last_message_at  # noqa: PLW0603
@@ -124,13 +125,12 @@ async def _run_with_reconnect(dispatch_fn) -> None:  # noqa: ANN001
             return
         except Exception as exc:  # noqa: BLE001
             _consumer_status = "connecting"
-            logger.warning(
-                "Consumer lost connection: %s — reconnecting in 5 s", exc
-            )
+            logger.warning("Consumer lost connection: %s — reconnecting in 5 s", exc)
             await asyncio.sleep(5)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def start_consumer(dispatch_fn) -> None:  # noqa: ANN001
     """Launch the consumer as a non-blocking background task."""

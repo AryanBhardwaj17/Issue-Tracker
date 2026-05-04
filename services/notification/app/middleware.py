@@ -14,9 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
-request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "request_id", default="-"
-)
+request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +30,7 @@ class RequestIDFilter(logging.Filter):
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Propagate or generate an X-Request-ID header."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         incoming_id = request.headers.get("x-request-id")
         rid = incoming_id if incoming_id else str(uuid.uuid4())
         request_id_ctx.set(rid)
@@ -46,9 +42,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Log every HTTP request with method, path, status, and duration."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start = time.perf_counter()
         method = request.method
         path = request.url.path

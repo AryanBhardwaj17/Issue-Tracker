@@ -5,19 +5,18 @@ Revises:
 Create Date: 2026-05-04 00:00:00.000000
 
 """
+
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "f3a9c2d8b1e7"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -41,8 +40,13 @@ def upgrade() -> None:
             sent_at TIMESTAMPTZ
         )
     """)
-    op.execute("CREATE INDEX IF NOT EXISTS ix_email_deliveries_event_status ON email_deliveries (event_type, status)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_email_deliveries_created_at ON email_deliveries (created_at)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_email_deliveries_event_status"
+        " ON email_deliveries (event_type, status)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_email_deliveries_created_at ON email_deliveries (created_at)"
+    )
 
     op.execute("""
         CREATE TABLE IF NOT EXISTS notifications (
@@ -56,7 +60,10 @@ def upgrade() -> None:
             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
     """)
-    op.execute("CREATE INDEX IF NOT EXISTS ix_notifications_user_read_created ON notifications (user_id, is_read, created_at)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_notifications_user_read_created"
+        " ON notifications (user_id, is_read, created_at)"
+    )
 
 
 def downgrade() -> None:

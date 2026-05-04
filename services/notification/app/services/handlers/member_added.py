@@ -32,7 +32,7 @@ async def handle_member_added(
     recipient_name = payload.added_user_name
 
     title = f"You've been added to {payload.project_name}"
-    body = f"{payload.actor_name} added you to the project \"{payload.project_name}\"."
+    body = f'{payload.actor_name} added you to the project "{payload.project_name}".'
     link = f"/projects/{payload.project_id}/board"
 
     # In-app notification — ALWAYS written, even if email fails

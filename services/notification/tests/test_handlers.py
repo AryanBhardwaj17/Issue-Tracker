@@ -1,9 +1,7 @@
 """Unit tests for all 5 event handlers — row creation, actor exclusion, dedup, SMTP failure."""
 
 import uuid
-from unittest.mock import AsyncMock
 
-import pytest
 from sqlalchemy import select
 
 from app.events.payloads import (
@@ -21,7 +19,6 @@ from app.services.handlers import (
     handle_story_assigned,
     handle_story_unassigned,
 )
-
 from tests.factories import (
     make_comment_created_payload,
     make_member_added_payload,
@@ -29,7 +26,6 @@ from tests.factories import (
     make_story_assigned_payload,
     make_story_unassigned_payload,
 )
-
 
 EVENT_ID = str(uuid.uuid4())
 
@@ -99,9 +95,7 @@ class TestHandleMemberAdded:
 
 class TestHandleOwnershipTransferred:
     async def test_creates_notification_and_delivery(self, db_session, mock_send_email):
-        payload = OwnershipTransferredPayload.model_validate(
-            make_ownership_transferred_payload()
-        )
+        payload = OwnershipTransferredPayload.model_validate(make_ownership_transferred_payload())
         await handle_ownership_transferred(payload, db_session, event_id=EVENT_ID)
         await db_session.commit()
 
@@ -202,7 +196,8 @@ class TestHandleStoryUnassigned:
         """previous_assignee == actor → no rows, no email."""
         actor_id = str(uuid.uuid4())
         data = make_story_unassigned_payload(
-            previous_assignee_id=actor_id, actor_id=actor_id,
+            previous_assignee_id=actor_id,
+            actor_id=actor_id,
         )
         payload = StoryUnassignedPayload.model_validate(data)
         await handle_story_unassigned(payload, db_session, event_id=EVENT_ID)
@@ -335,7 +330,9 @@ class TestHandleCommentCreated:
     async def test_no_assignee_only_reporter_notified(self, db_session, mock_send_email):
         """Assignee is None → only reporter gets notified (if != author)."""
         data = make_comment_created_payload(
-            assignee_id=None, assignee_email=None, assignee_name=None,
+            assignee_id=None,
+            assignee_email=None,
+            assignee_name=None,
         )
         payload = CommentCreatedPayload.model_validate(data)
         await handle_comment_created(payload, db_session, event_id=EVENT_ID)
@@ -368,13 +365,17 @@ class TestHandleCommentCreated:
         assert len(notifs) == 0
 
     async def test_smtp_failure_one_recipient_still_creates_notification(
-        self, db_session, mock_send_email,
+        self,
+        db_session,
+        mock_send_email,
     ):
         """SMTP fails → Notification still created, EmailDelivery status=FAILED."""
         mock_send_email["comment_created"].side_effect = ConnectionError("SMTP unreachable")
 
         data = make_comment_created_payload(
-            assignee_id=None, assignee_email=None, assignee_name=None,
+            assignee_id=None,
+            assignee_email=None,
+            assignee_name=None,
         )
         payload = CommentCreatedPayload.model_validate(data)
         await handle_comment_created(payload, db_session, event_id=EVENT_ID)
@@ -408,7 +409,9 @@ class TestHandleCommentCreated:
         data = make_comment_created_payload(
             story_key="PROJ-5",
             comment_author_name="Eve Dev",
-            assignee_id=None, assignee_email=None, assignee_name=None,
+            assignee_id=None,
+            assignee_email=None,
+            assignee_name=None,
         )
         payload = CommentCreatedPayload.model_validate(data)
         await handle_comment_created(payload, db_session, event_id=EVENT_ID)
@@ -419,7 +422,9 @@ class TestHandleCommentCreated:
 
     async def test_notification_link_includes_story(self, db_session, mock_send_email):
         data = make_comment_created_payload(
-            assignee_id=None, assignee_email=None, assignee_name=None,
+            assignee_id=None,
+            assignee_email=None,
+            assignee_name=None,
         )
         payload = CommentCreatedPayload.model_validate(data)
         await handle_comment_created(payload, db_session, event_id=EVENT_ID)
@@ -430,7 +435,9 @@ class TestHandleCommentCreated:
 
     async def test_notification_is_read_defaults_false(self, db_session, mock_send_email):
         data = make_comment_created_payload(
-            assignee_id=None, assignee_email=None, assignee_name=None,
+            assignee_id=None,
+            assignee_email=None,
+            assignee_name=None,
         )
         payload = CommentCreatedPayload.model_validate(data)
         await handle_comment_created(payload, db_session, event_id=EVENT_ID)

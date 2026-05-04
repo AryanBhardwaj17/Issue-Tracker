@@ -51,11 +51,15 @@ async def db_session() -> AsyncSession:
 @pytest.fixture()
 def mock_send_email():
     """Patch mailer.send_email with an AsyncMock. Yields the mock."""
-    with patch("app.services.handlers.member_added.send_email", new_callable=AsyncMock) as m1, \
-         patch("app.services.handlers.ownership_transferred.send_email", new_callable=AsyncMock) as m2, \
-         patch("app.services.handlers.story_assigned.send_email", new_callable=AsyncMock) as m3, \
-         patch("app.services.handlers.story_unassigned.send_email", new_callable=AsyncMock) as m4, \
-         patch("app.services.handlers.comment_created.send_email", new_callable=AsyncMock) as m5:
+    with (
+        patch("app.services.handlers.member_added.send_email", new_callable=AsyncMock) as m1,
+        patch(
+            "app.services.handlers.ownership_transferred.send_email", new_callable=AsyncMock
+        ) as m2,
+        patch("app.services.handlers.story_assigned.send_email", new_callable=AsyncMock) as m3,
+        patch("app.services.handlers.story_unassigned.send_email", new_callable=AsyncMock) as m4,
+        patch("app.services.handlers.comment_created.send_email", new_callable=AsyncMock) as m5,
+    ):
         # Return a dict so tests can check the specific handler's mock
         yield {
             "member_added": m1,
@@ -67,6 +71,7 @@ def mock_send_email():
 
 
 # ── RabbitMQ helpers (for smoke/integration tests only) ──────────────────────
+
 
 async def _rabbitmq_reachable() -> bool:
     """Return True if RabbitMQ is reachable, False otherwise."""
