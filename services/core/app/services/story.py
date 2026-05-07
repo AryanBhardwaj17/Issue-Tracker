@@ -442,6 +442,12 @@ async def update_story(
             action = ActivityAction.status_changed
         elif field == "assignee_id":
             action = ActivityAction.assigned
+            # Resolve UUIDs → member names for human-readable logs
+            if new_val is not None:
+                new_val = new_assignee_member.name if new_assignee_member else new_val
+            if old_val is not None:
+                old_member_row = await member_repo.get(db, project.id, uuid.UUID(old_val))
+                old_val = old_member_row.name if old_member_row else old_val
         else:
             action = ActivityAction.field_updated
 

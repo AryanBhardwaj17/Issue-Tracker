@@ -7,6 +7,7 @@ import StoryHeader from "@/components/stories/StoryHeader";
 import StoryMetaSidebar from "@/components/stories/StoryMetaSidebar";
 import TasksSection from "@/components/stories/TasksSection";
 import CommentsSection from "@/components/stories/CommentsSection";
+import ActivityTimeline from "@/components/stories/ActivityTimeline";
 import { useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -68,6 +69,7 @@ export default function StoryDetailPage() {
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
           <TasksSection projectId={projectId} storyId={storyId} userRole={userRole} storyAssignee={story.assignee} />
+          <ActivityTimeline entityType="story" entityId={storyId} projectId={projectId} />
           <CommentsSection projectId={projectId} storyId={storyId} userRole={userRole} />
         </div>
 

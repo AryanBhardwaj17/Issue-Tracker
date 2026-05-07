@@ -259,6 +259,13 @@ export async function deleteEpic(
   await api.delete(`/projects/${projectId}/epics/${epicId}`);
 }
 
+export async function getEpic(projectId: string, epicId: string): Promise<Epic> {
+  const { data } = await api.get<Envelope<Epic>>(
+    `/projects/${projectId}/epics/${epicId}`,
+  );
+  return data.data;
+}
+
 // ─── Story Types ──────────────────────────────────────────────────────────────
 
 export type StoryStatus =
@@ -533,6 +540,17 @@ export async function deleteSubtask(
   await api.delete(`/projects/${projectId}/tasks/${parentTaskId}/subtasks/${subtaskId}`);
 }
 
+export async function getTask(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+): Promise<TaskOut> {
+  const { data } = await api.get<Envelope<TaskOut>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}`,
+  );
+  return data.data;
+}
+
 // ─── Comment Types ────────────────────────────────────────────────────────────
 
 export interface CommentAuthor {
@@ -542,7 +560,9 @@ export interface CommentAuthor {
 
 export interface Comment {
   id: string;
-  userStoryId: string;
+  userStoryId: string | null;
+  taskId: string | null;
+  epicId: string | null;
   author: CommentAuthor;
   body: string;
   imageUrl: string | null;
@@ -609,6 +629,166 @@ export async function deleteComment(
   await api.delete(`/projects/${projectId}/stories/${storyId}/comments/${commentId}`);
 }
 
+// ─── Task Comment API ─────────────────────────────────────────────────────────
+
+export async function listTaskComments(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Comment>> {
+  const { data } = await api.get<Envelope<Comment[]>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/comments`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createTaskComment(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  body: CommentCreatePayload,
+): Promise<Comment> {
+  const { data } = await api.post<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/comments`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateTaskComment(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  commentId: string,
+  body: CommentPatchPayload,
+): Promise<Comment> {
+  const { data } = await api.patch<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/comments/${commentId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteTaskComment(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  commentId: string,
+): Promise<void> {
+  await api.delete(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/comments/${commentId}`,
+  );
+}
+
+// ─── Subtask Comment API ──────────────────────────────────────────────────────
+
+export async function listSubtaskComments(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  subtaskId: string,
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Comment>> {
+  const { data } = await api.get<Envelope<Comment[]>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/subtasks/${subtaskId}/comments`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createSubtaskComment(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  subtaskId: string,
+  body: CommentCreatePayload,
+): Promise<Comment> {
+  const { data } = await api.post<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/subtasks/${subtaskId}/comments`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateSubtaskComment(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  subtaskId: string,
+  commentId: string,
+  body: CommentPatchPayload,
+): Promise<Comment> {
+  const { data } = await api.patch<Envelope<Comment>>(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/subtasks/${subtaskId}/comments/${commentId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteSubtaskComment(
+  projectId: string,
+  storyId: string,
+  taskId: string,
+  subtaskId: string,
+  commentId: string,
+): Promise<void> {
+  await api.delete(
+    `/projects/${projectId}/stories/${storyId}/tasks/${taskId}/subtasks/${subtaskId}/comments/${commentId}`,
+  );
+}
+
+// ─── Epic Comment API ─────────────────────────────────────────────────────────
+
+export async function listEpicComments(
+  projectId: string,
+  epicId: string,
+  page = 1,
+  pageSize = 25,
+): Promise<PaginatedResult<Comment>> {
+  const { data } = await api.get<Envelope<Comment[]>>(
+    `/projects/${projectId}/epics/${epicId}/comments`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function createEpicComment(
+  projectId: string,
+  epicId: string,
+  body: CommentCreatePayload,
+): Promise<Comment> {
+  const { data } = await api.post<Envelope<Comment>>(
+    `/projects/${projectId}/epics/${epicId}/comments`,
+    body,
+  );
+  return data.data;
+}
+
+export async function updateEpicComment(
+  projectId: string,
+  epicId: string,
+  commentId: string,
+  body: CommentPatchPayload,
+): Promise<Comment> {
+  const { data } = await api.patch<Envelope<Comment>>(
+    `/projects/${projectId}/epics/${epicId}/comments/${commentId}`,
+    body,
+  );
+  return data.data;
+}
+
+export async function deleteEpicComment(
+  projectId: string,
+  epicId: string,
+  commentId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/epics/${epicId}/comments/${commentId}`);
+}
+
 // ─── Upload API ───────────────────────────────────────────────────────────────
 
 export async function uploadImage(file: File): Promise<string> {
@@ -668,6 +848,98 @@ export async function markAllNotificationsRead(): Promise<number> {
     "/notifications/mark-all-read",
   );
   return data.data.updatedCount;
+}
+
+// ─── Activity Types ───────────────────────────────────────────────────────────
+
+export interface ActivityLogOut {
+  id: string;
+  projectId: string;
+  storyId: string | null;
+  taskId: string | null;
+  epicId: string | null;
+  entityType: string;
+  action: string;
+  fieldName: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  actorId: string;
+  actorName: string;
+  createdAt: string;
+}
+
+// ─── Activity API ─────────────────────────────────────────────────────────────
+
+export async function listStoryActivity(
+  projectId: string,
+  storyId: string,
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedResult<ActivityLogOut>> {
+  const { data } = await api.get<Envelope<ActivityLogOut[]>>(
+    `/projects/${projectId}/stories/${storyId}/activity`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function listTaskActivity(
+  projectId: string,
+  taskId: string,
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedResult<ActivityLogOut>> {
+  const { data } = await api.get<Envelope<ActivityLogOut[]>>(
+    `/projects/${projectId}/tasks/${taskId}/activity`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function listEpicActivity(
+  projectId: string,
+  epicId: string,
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedResult<ActivityLogOut>> {
+  const { data } = await api.get<Envelope<ActivityLogOut[]>>(
+    `/projects/${projectId}/epics/${epicId}/activity`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function listProjectActivity(
+  projectId: string,
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedResult<ActivityLogOut>> {
+  const { data } = await api.get<Envelope<ActivityLogOut[]>>(
+    `/projects/${projectId}/activity`,
+    { params: { page, pageSize } },
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+// ─── Trash API ────────────────────────────────────────────────────────────────
+
+export async function listDeletedStories(
+  projectId: string,
+): Promise<PaginatedResult<Story>> {
+  const { data } = await api.get<Envelope<Story[]>>(
+    `/projects/${projectId}/trash`,
+  );
+  return { items: data.data, pagination: data.pagination! };
+}
+
+export async function restoreStory(
+  projectId: string,
+  storyId: string,
+): Promise<Story> {
+  const { data } = await api.post<Envelope<Story>>(
+    `/projects/${projectId}/stories/${storyId}/restore`,
+  );
+  return data.data;
 }
 
 // ─── Backward-compat aliases (E4-S3) ─────────────────────────────────────────

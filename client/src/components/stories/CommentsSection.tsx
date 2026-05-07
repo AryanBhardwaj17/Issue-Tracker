@@ -15,17 +15,20 @@ import { canEditComment, canDeleteComment } from "@/lib/auth-predicates";
 
 interface CommentsSectionProps {
   projectId: string;
-  storyId: string;
+  storyId?: string;
   userRole: "owner" | "member";
+  taskId?: string;
+  subtaskId?: string;
+  epicId?: string;
 }
 
 const COMMENT_MAX_LENGTH = 10000;
 
-export default function CommentsSection({ projectId, storyId, userRole }: CommentsSectionProps) {
-  const { data, isLoading } = useComments(projectId, storyId);
-  const createComment = useCreateComment(projectId, storyId);
-  const updateComment = useUpdateComment(projectId, storyId);
-  const deleteComment = useDeleteComment(projectId, storyId);
+export default function CommentsSection({ projectId, storyId, userRole, taskId, subtaskId, epicId }: CommentsSectionProps) {
+  const { data, isLoading } = useComments(projectId, storyId ?? "", 1, 25, taskId, subtaskId, epicId);
+  const createComment = useCreateComment(projectId, storyId ?? "", taskId, subtaskId, epicId);
+  const updateComment = useUpdateComment(projectId, storyId ?? "", taskId, subtaskId, epicId);
+  const deleteComment = useDeleteComment(projectId, storyId ?? "", taskId, subtaskId, epicId);
   const uploadImage = useUploadImage();
 
   const [body, setBody] = useState("");
@@ -187,7 +190,7 @@ export default function CommentsSection({ projectId, storyId, userRole }: Commen
             onClick={handleSubmit}
             isLoading={createComment.isPending}
             disabled={!body.trim()}
-            className="!px-4 !py-1.5 text-xs"
+            className="px-4! py-1.5! text-xs"
           >
             Comment
           </Button>
@@ -336,10 +339,10 @@ function CommentItem({
               />
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Button variant="primary" onClick={onEditSave} isLoading={isUpdating} className="!px-3 !py-1 text-xs">
+              <Button variant="primary" onClick={onEditSave} isLoading={isUpdating} className="px-3! py-1! text-xs">
                 Save
               </Button>
-              <Button variant="secondary" onClick={onEditCancel} className="!px-3 !py-1 text-xs">
+              <Button variant="secondary" onClick={onEditCancel} className="px-3! py-1! text-xs">
                 Cancel
               </Button>
             </div>
