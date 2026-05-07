@@ -16,14 +16,18 @@ from app.models.comment import Comment
 async def create(
     db: AsyncSession,
     *,
-    user_story_id: uuid.UUID,
     author_id: uuid.UUID,
     body: str,
     image_url: str | None,
+    user_story_id: uuid.UUID | None = None,
+    task_id: uuid.UUID | None = None,
+    epic_id: uuid.UUID | None = None,
 ) -> Comment:
     """Insert a new comment and flush (does NOT commit)."""
     comment = Comment(
         user_story_id=user_story_id,
+        task_id=task_id,
+        epic_id=epic_id,
         author_id=author_id,
         body=body,
         image_url=image_url,
@@ -74,3 +78,57 @@ async def list_for_story(
 async def soft_delete(db: AsyncSession, comment_id: uuid.UUID) -> None:
     """Set is_deleted=True. Does NOT commit."""
     await db.execute(update(Comment).where(Comment.id == comment_id).values(is_deleted=True))
+
+
+async def list_for_task(
+    db: AsyncSession,
+    *,
+    task_id: uuid.UUID,
+    page: int,
+    page_size: int,
+) -> tuple[list[Comment], int]:
+    """
+    Return active (non-deleted) comments for a task or subtask, ordered oldest-first.
+
+    Returns ``(rows, total_count)`` for pagination metadata.
+    """
+    base = select(Comment).where(
+        Comment.task_id == task_id,
+        Comment.is_deleted.is_(False),
+    )
+
+    total_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total: int = total_result.scalar_one()
+
+    offset = (page - 1) * page_size
+    rows_result = await db.execute(
+        base.order_by(Comment.created_at.asc()).offset(offset).limit(page_size)
+    )
+    return list(rows_result.scalars().all()), total
+
+
+async def list_for_epic(
+    db: AsyncSession,
+    *,
+    epic_id: uuid.UUID,
+    page: int,
+    page_size: int,
+) -> tuple[list[Comment], int]:
+    """
+    Return active (non-deleted) comments for an epic, ordered oldest-first.
+
+    Returns ``(rows, total_count)`` for pagination metadata.
+    """
+    base = select(Comment).where(
+        Comment.epic_id == epic_id,
+        Comment.is_deleted.is_(False),
+    )
+
+    total_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total: int = total_result.scalar_one()
+
+    offset = (page - 1) * page_size
+    rows_result = await db.execute(
+        base.order_by(Comment.created_at.asc()).offset(offset).limit(page_size)
+    )
+    return list(rows_result.scalars().all()), total

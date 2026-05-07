@@ -18,14 +18,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ProjectMembership
 from app.core.config import settings
-from app.core.exceptions import CommentNotFoundError, ForbiddenError, StoryNotFoundError
+from app.core.exceptions import (
+    CommentNotFoundError,
+    EpicNotFoundError,
+    ForbiddenError,
+    StoryNotFoundError,
+    TaskNotFoundError,
+)
 from app.events.constants import EVENT_COMMENT_CREATED
 from app.events.payloads import build_comment_created_payload
 from app.events.publisher import publish_event
 from app.repositories import comment as comment_repo
+from app.repositories import epic as epic_repo
 from app.repositories import project as project_repo
 from app.repositories import project_members as member_repo
 from app.repositories import story as story_repo
+from app.repositories import task as task_repo
 from app.schemas.comment import AuthorRef, CommentCreate, CommentOut, CommentUpdate
 from app.schemas.common import Pagination, paginate
 from app.utils.constants import ERR_COMMENT_DELETE_FORBIDDEN, ERR_COMMENT_EDIT_FORBIDDEN
@@ -74,6 +82,8 @@ async def _to_comment_out(db: AsyncSession, comment, project_id: uuid.UUID) -> C
     return CommentOut(
         id=comment.id,
         user_story_id=comment.user_story_id,
+        task_id=comment.task_id,
+        epic_id=comment.epic_id,
         author=author,
         body=comment.body,
         image_url=comment.image_url,
@@ -105,10 +115,10 @@ async def create_comment(
 
     comment = await comment_repo.create(
         db,
-        user_story_id=story_id,
         author_id=user.id,
         body=body_data.body,
         image_url=body_data.image_url,
+        user_story_id=story_id,
     )
     await db.commit()
     await db.refresh(comment)
@@ -263,5 +273,253 @@ async def delete_comment(
     await db.commit()
 
     # Delete image binary after successful commit
+    if image_url:
+        _unlink_image(image_url)
+
+
+# ── Task / Subtask comments ───────────────────────────────────────────────────
+
+
+async def create_task_comment(
+    db: AsyncSession,
+    *,
+    task_id: uuid.UUID,
+    user: CurrentUser,
+    membership: ProjectMembership,
+    body_data: CommentCreate,
+) -> CommentOut:
+    """Create a comment on a task or subtask. Validates task existence."""
+    task = await task_repo.get_by_id(db, task_id)
+    if task is None or task.project_id != membership.project_id:
+        raise TaskNotFoundError()
+
+    comment = await comment_repo.create(
+        db,
+        author_id=user.id,
+        body=body_data.body,
+        image_url=body_data.image_url,
+        task_id=task_id,
+    )
+    await db.commit()
+    await db.refresh(comment)
+
+    return await _to_comment_out(db, comment, membership.project_id)
+
+
+async def list_task_comments(
+    db: AsyncSession,
+    *,
+    task_id: uuid.UUID,
+    membership: ProjectMembership,
+    page: int,
+    page_size: int,
+) -> tuple[list[CommentOut], Pagination]:
+    """List active comments for a task or subtask, oldest first."""
+    task = await task_repo.get_by_id(db, task_id)
+    if task is None or task.project_id != membership.project_id:
+        raise TaskNotFoundError()
+
+    rows, total = await comment_repo.list_for_task(
+        db, task_id=task_id, page=page, page_size=page_size
+    )
+    items = [await _to_comment_out(db, c, membership.project_id) for c in rows]
+    pagination = paginate(page, page_size, total)
+    return items, pagination
+
+
+async def edit_task_comment(
+    db: AsyncSession,
+    *,
+    task_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    user: CurrentUser,
+    membership: ProjectMembership,
+    body_data: CommentUpdate,
+) -> CommentOut:
+    """Edit a task/subtask comment. Author-only guard."""
+    task = await task_repo.get_by_id(db, task_id)
+    if task is None or task.project_id != membership.project_id:
+        raise TaskNotFoundError()
+
+    comment = await comment_repo.get_by_id(db, comment_id)
+    if comment is None or comment.is_deleted:
+        raise CommentNotFoundError()
+    if comment.task_id != task_id:
+        raise CommentNotFoundError()
+    if comment.author_id != user.id:
+        raise ForbiddenError(ERR_COMMENT_EDIT_FORBIDDEN)
+
+    old_image_url = comment.image_url
+
+    if body_data.body is not None:
+        comment.body = body_data.body
+    if body_data.remove_image:
+        comment.image_url = None
+    elif body_data.image_url is not None:
+        comment.image_url = body_data.image_url
+
+    await db.commit()
+    await db.refresh(comment)
+
+    should_delete_old = (
+        old_image_url is not None
+        and (body_data.remove_image or body_data.image_url is not None)
+        and old_image_url != comment.image_url
+    )
+    if should_delete_old:
+        _unlink_image(old_image_url)
+
+    return await _to_comment_out(db, comment, membership.project_id)
+
+
+async def delete_task_comment(
+    db: AsyncSession,
+    *,
+    task_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    user: CurrentUser,
+    membership: ProjectMembership,
+) -> None:
+    """Soft-delete a task/subtask comment. Author or owner can delete."""
+    task = await task_repo.get_by_id(db, task_id)
+    if task is None or task.project_id != membership.project_id:
+        raise TaskNotFoundError()
+
+    comment = await comment_repo.get_by_id(db, comment_id)
+    if comment is None or comment.is_deleted:
+        raise CommentNotFoundError()
+    if comment.task_id != task_id:
+        raise CommentNotFoundError()
+    if comment.author_id != user.id and membership.role != "owner":
+        raise ForbiddenError(ERR_COMMENT_DELETE_FORBIDDEN)
+
+    image_url = comment.image_url
+    await comment_repo.soft_delete(db, comment_id)
+    await db.commit()
+
+    if image_url:
+        _unlink_image(image_url)
+
+
+# ── Epic comments ─────────────────────────────────────────────────────────────
+
+
+async def create_epic_comment(
+    db: AsyncSession,
+    *,
+    epic_id: uuid.UUID,
+    user: CurrentUser,
+    membership: ProjectMembership,
+    body_data: CommentCreate,
+) -> CommentOut:
+    """Create a comment on an epic. Validates epic existence."""
+    epic = await epic_repo.get_by_id(db, epic_id)
+    if epic is None or epic.project_id != membership.project_id or epic.is_deleted:
+        raise EpicNotFoundError()
+
+    comment = await comment_repo.create(
+        db,
+        author_id=user.id,
+        body=body_data.body,
+        image_url=body_data.image_url,
+        epic_id=epic_id,
+    )
+    await db.commit()
+    await db.refresh(comment)
+
+    return await _to_comment_out(db, comment, membership.project_id)
+
+
+async def list_epic_comments(
+    db: AsyncSession,
+    *,
+    epic_id: uuid.UUID,
+    membership: ProjectMembership,
+    page: int,
+    page_size: int,
+) -> tuple[list[CommentOut], Pagination]:
+    """List active comments for an epic, oldest first."""
+    epic = await epic_repo.get_by_id(db, epic_id)
+    if epic is None or epic.project_id != membership.project_id or epic.is_deleted:
+        raise EpicNotFoundError()
+
+    rows, total = await comment_repo.list_for_epic(
+        db, epic_id=epic_id, page=page, page_size=page_size
+    )
+    items = [await _to_comment_out(db, c, membership.project_id) for c in rows]
+    pagination = paginate(page, page_size, total)
+    return items, pagination
+
+
+async def edit_epic_comment(
+    db: AsyncSession,
+    *,
+    epic_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    user: CurrentUser,
+    membership: ProjectMembership,
+    body_data: CommentUpdate,
+) -> CommentOut:
+    """Edit an epic comment. Author-only guard."""
+    epic = await epic_repo.get_by_id(db, epic_id)
+    if epic is None or epic.project_id != membership.project_id or epic.is_deleted:
+        raise EpicNotFoundError()
+
+    comment = await comment_repo.get_by_id(db, comment_id)
+    if comment is None or comment.is_deleted:
+        raise CommentNotFoundError()
+    if comment.epic_id != epic_id:
+        raise CommentNotFoundError()
+    if comment.author_id != user.id:
+        raise ForbiddenError(ERR_COMMENT_EDIT_FORBIDDEN)
+
+    old_image_url = comment.image_url
+
+    if body_data.body is not None:
+        comment.body = body_data.body
+    if body_data.remove_image:
+        comment.image_url = None
+    elif body_data.image_url is not None:
+        comment.image_url = body_data.image_url
+
+    await db.commit()
+    await db.refresh(comment)
+
+    should_delete_old = (
+        old_image_url is not None
+        and (body_data.remove_image or body_data.image_url is not None)
+        and old_image_url != comment.image_url
+    )
+    if should_delete_old:
+        _unlink_image(old_image_url)
+
+    return await _to_comment_out(db, comment, membership.project_id)
+
+
+async def delete_epic_comment(
+    db: AsyncSession,
+    *,
+    epic_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    user: CurrentUser,
+    membership: ProjectMembership,
+) -> None:
+    """Soft-delete an epic comment. Author or owner can delete."""
+    epic = await epic_repo.get_by_id(db, epic_id)
+    if epic is None or epic.project_id != membership.project_id or epic.is_deleted:
+        raise EpicNotFoundError()
+
+    comment = await comment_repo.get_by_id(db, comment_id)
+    if comment is None or comment.is_deleted:
+        raise CommentNotFoundError()
+    if comment.epic_id != epic_id:
+        raise CommentNotFoundError()
+    if comment.author_id != user.id and membership.role != "owner":
+        raise ForbiddenError(ERR_COMMENT_DELETE_FORBIDDEN)
+
+    image_url = comment.image_url
+    await comment_repo.soft_delete(db, comment_id)
+    await db.commit()
+
     if image_url:
         _unlink_image(image_url)

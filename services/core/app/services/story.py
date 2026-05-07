@@ -21,6 +21,7 @@ from app.core.exceptions import BadRequestError, ForbiddenError, StoryNotFoundEr
 from app.events.constants import EVENT_STORY_ASSIGNED, EVENT_STORY_UNASSIGNED
 from app.events.payloads import build_story_assigned_payload, build_story_unassigned_payload
 from app.events.publisher import publish_event
+from app.models.activity_log import ActivityAction, ActivityEntityType
 from app.models.comment import Comment
 from app.models.project import Project
 from app.models.project_member import ProjectMember
@@ -32,6 +33,7 @@ from app.repositories import story as story_repo
 from app.repositories import task as task_repo
 from app.schemas.common import Pagination, paginate
 from app.schemas.story import StoryCreate, StoryOut, StoryPatch, UserRef
+from app.services.activity_log import log_activity
 from app.utils.constants import (
     ALLOWED_SORT_FIELDS,
     DEFAULT_PAGE,
@@ -104,9 +106,7 @@ def assert_can_delete(story: UserStory, user: CurrentUser, membership: ProjectMe
     raise ForbiddenError(ERR_DELETE_FORBIDDEN)
 
 
-def assert_can_edit(
-    story: UserStory, user: CurrentUser, membership: ProjectMembership
-) -> None:
+def assert_can_edit(story: UserStory, user: CurrentUser, membership: ProjectMembership) -> None:
     """Only the reporter, assignee, or the project owner can edit a story."""
     if membership.role == "owner":
         return
@@ -194,6 +194,17 @@ async def create_story(
         reporter_id=user.id,
         due_date=body.due_date,
     )
+    # Log activity: story created
+    await log_activity(
+        db,
+        project_id=project.id,
+        entity_type=ActivityEntityType.story,
+        action=ActivityAction.created,
+        actor_id=user.id,
+        actor_name=user.name,
+        story_id=story.id,
+    )
+
     await db.commit()
     await db.refresh(story)
 
@@ -368,6 +379,26 @@ async def update_story(
                     actor_name=user.name,
                 )
 
+    # ── Capture old values for activity logging ─────────────────────────
+    old_values: dict[str, str | None] = {}
+    for field in patch_data:
+        if field == "status":
+            raw = story.status
+            old_values["status"] = raw.value if isinstance(raw, StoryStatus) else raw
+        elif field == "priority":
+            raw = story.priority
+            old_values["priority"] = raw.value if isinstance(raw, Priority) else raw
+        elif field == "assignee_id":
+            old_values["assignee_id"] = str(story.assignee_id) if story.assignee_id else None
+        elif field == "epic_id":
+            old_values["epic_id"] = str(story.epic_id) if story.epic_id else None
+        elif field == "due_date":
+            old_values["due_date"] = story.due_date.isoformat() if story.due_date else None
+        elif field == "story_points":
+            old_values["story_points"] = str(story.story_points) if story.story_points else None
+        else:
+            old_values[field] = getattr(story, field, None)
+
     # ── Persist ───────────────────────────────────────────────────────────
     old_assignee_id = story.assignee_id  # snapshot before mutation
     for field, value in patch_data.items():
@@ -381,6 +412,51 @@ async def update_story(
     # ── Cascade assignee change to tasks/subtasks ─────────────────────────
     if "assignee_id" in patch_data and patch_data["assignee_id"] != old_assignee_id:
         await task_repo.update_assignee_for_story(db, story.id, patch_data["assignee_id"])
+
+    # ── Log activity for each changed field ───────────────────────────────
+    for field, value in patch_data.items():
+        new_val: str | None
+        if field == "status":
+            new_val = value
+        elif field == "priority":
+            new_val = value
+        elif field == "assignee_id":
+            new_val = str(value) if value else None
+        elif field == "epic_id":
+            new_val = str(value) if value else None
+        elif field == "due_date":
+            new_val = value.isoformat() if value else None
+        elif field == "story_points":
+            new_val = str(value) if value else None
+        else:
+            new_val = value
+
+        old_val = old_values.get(field)
+
+        # Skip no-op changes
+        if str(old_val) == str(new_val):
+            continue
+
+        # Determine action type
+        if field == "status":
+            action = ActivityAction.status_changed
+        elif field == "assignee_id":
+            action = ActivityAction.assigned
+        else:
+            action = ActivityAction.field_updated
+
+        await log_activity(
+            db,
+            project_id=project.id,
+            entity_type=ActivityEntityType.story,
+            action=action,
+            actor_id=user.id,
+            actor_name=user.name,
+            story_id=story.id,
+            field_name=field,
+            old_value=str(old_val) if old_val is not None else None,
+            new_value=str(new_val) if new_val is not None else None,
+        )
 
     await db.commit()
     await db.refresh(story)
@@ -408,6 +484,17 @@ async def delete_story(
         raise StoryNotFoundError()
 
     assert_can_delete(story, user, membership)
+
+    # Log activity BEFORE soft-delete (story_id FK will remain valid)
+    await log_activity(
+        db,
+        project_id=project.id,
+        entity_type=ActivityEntityType.story,
+        action=ActivityAction.deleted,
+        actor_id=user.id,
+        actor_name=user.name,
+        story_id=story_id,
+    )
 
     # Soft-delete the story
     await story_repo.soft_delete(db, story_id)

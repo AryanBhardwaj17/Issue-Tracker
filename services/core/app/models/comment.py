@@ -1,14 +1,15 @@
 """
 Comment ORM model.
 
-Belongs to a user story. Supports an optional image attachment stored as a
-relative path under /uploads/. Soft-deleted via is_deleted flag.
+Belongs to exactly one of: user story, task, or epic (enforced by DB CHECK
+constraint). Supports an optional image attachment stored as a relative path
+under /uploads/. Soft-deleted via is_deleted flag.
 """
 
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,13 +20,33 @@ class Comment(Base):
     """Persisted comment record."""
 
     __tablename__ = "comments"
-    __table_args__ = (Index("ix_comments_user_story_deleted", "user_story_id", "is_deleted"),)
+    __table_args__ = (
+        Index("ix_comments_user_story_deleted", "user_story_id", "is_deleted"),
+        Index("ix_comments_task_deleted", "task_id", "is_deleted"),
+        Index("ix_comments_epic_deleted", "epic_id", "is_deleted"),
+        CheckConstraint(
+            "(CASE WHEN user_story_id IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN task_id IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN epic_id IS NOT NULL THEN 1 ELSE 0 END) = 1",
+            name="ck_comments_one_owner",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_story_id: Mapped[uuid.UUID] = mapped_column(
+    user_story_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("user_stories.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("user_stories.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    epic_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("epics.id", ondelete="SET NULL"),
+        nullable=True,
     )
     author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     body: Mapped[str] = mapped_column(String, nullable=False)
@@ -46,7 +67,9 @@ class Comment(Base):
     )
 
     # Relationships
-    user_story: Mapped["UserStory"] = relationship(back_populates="comments")  # noqa: F821
+    user_story: Mapped["UserStory | None"] = relationship(back_populates="comments")  # noqa: F821
+    task: Mapped["Task | None"] = relationship(lazy="noload")  # noqa: F821
+    epic: Mapped["Epic | None"] = relationship(lazy="noload")  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<Comment id={self.id} user_story_id={self.user_story_id}>"

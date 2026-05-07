@@ -18,11 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ProjectMembership
 from app.core.exceptions import EpicDeleteForbiddenError, EpicEditForbiddenError, EpicNotFoundError
+from app.models.activity_log import ActivityAction, ActivityEntityType
 from app.models.project_member import ProjectMember
 from app.repositories import epic as epic_repo
 from app.repositories import project_members as member_repo
 from app.schemas.common import Pagination, paginate
 from app.schemas.epic import EpicOut, EpicProgressOut, EpicUpdate, ReporterRef
+from app.services.activity_log import log_activity
 from app.utils.constants import DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
 logger = logging.getLogger(__name__)
@@ -69,6 +71,17 @@ async def create_epic(
         description=description,
         reporter_id=user.id,
     )
+
+    await log_activity(
+        db,
+        project_id=membership.project_id,
+        entity_type=ActivityEntityType.epic,
+        action=ActivityAction.created,
+        actor_id=user.id,
+        actor_name=user.name,
+        epic_id=epic.id,
+    )
+
     await db.commit()
     await db.refresh(epic)
 
@@ -154,7 +167,40 @@ async def update_epic(
     if row.epic.reporter_id != user.id and membership.role != "owner":
         raise EpicEditForbiddenError()
 
+    # Capture old values for activity logging
+    old_name = row.epic.name
+    old_description = row.epic.description
+
     await epic_repo.update_fields(db, epic_id, name=data.name, description=data.description)
+
+    # Log activity per changed field
+    if data.name is not None and data.name != old_name:
+        await log_activity(
+            db,
+            project_id=membership.project_id,
+            entity_type=ActivityEntityType.epic,
+            action=ActivityAction.field_updated,
+            actor_id=user.id,
+            actor_name=user.name,
+            epic_id=epic_id,
+            field_name="name",
+            old_value=old_name,
+            new_value=data.name,
+        )
+    if data.description is not None and data.description != old_description:
+        await log_activity(
+            db,
+            project_id=membership.project_id,
+            entity_type=ActivityEntityType.epic,
+            action=ActivityAction.field_updated,
+            actor_id=user.id,
+            actor_name=user.name,
+            epic_id=epic_id,
+            field_name="description",
+            old_value=old_description,
+            new_value=data.description,
+        )
+
     await db.commit()
     await db.refresh(row.epic)
 
@@ -182,6 +228,16 @@ async def delete_epic(
 
     if row.epic.reporter_id != user.id and membership.role != "owner":
         raise EpicDeleteForbiddenError()
+
+    await log_activity(
+        db,
+        project_id=membership.project_id,
+        entity_type=ActivityEntityType.epic,
+        action=ActivityAction.deleted,
+        actor_id=user.id,
+        actor_name=user.name,
+        epic_id=epic_id,
+    )
 
     await epic_repo.cascade_soft_delete(db, epic_id)
     await db.commit()
