@@ -10,6 +10,7 @@ import {
   createEpic,
   updateEpic,
   deleteEpic,
+  getEpic,
 } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errors";
 
@@ -58,5 +59,14 @@ export function useDeleteEpic(projectId: string) {
       qc.invalidateQueries({ queryKey: ["epics", projectId] });
     },
     onError: (err) => toast.error(extractErrorMessage(err, "Failed to delete epic")),
+  });
+}
+
+export function useEpic(projectId: string, epicId: string) {
+  return useQuery({
+    queryKey: ["epic", projectId, epicId],
+    queryFn: () => getEpic(projectId, epicId),
+    enabled: !!projectId && !!epicId,
+    staleTime: 30_000,
   });
 }

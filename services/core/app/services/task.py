@@ -464,6 +464,13 @@ async def update_task(
                 action = ActivityAction.completed
             elif field == "assignee_id":
                 action = ActivityAction.assigned
+                # Resolve UUIDs → member names for human-readable logs
+                if new_val is not None:
+                    new_member_row = await member_repo.get(db, project_id, uuid.UUID(new_val))
+                    new_val = new_member_row.name if new_member_row else new_val
+                if old_val is not None:
+                    old_member_row = await member_repo.get(db, project_id, uuid.UUID(old_val))
+                    old_val = old_member_row.name if old_member_row else old_val
             else:
                 action = ActivityAction.field_updated
 
