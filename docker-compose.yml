@@ -146,6 +146,12 @@ services:
         condition: service_healthy
     networks:
       - issue-tracker-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # ── Gateway ──────────────────────────────────────────────────────────────────
 
@@ -167,6 +173,8 @@ services:
   client:
     image: ${IMAGE_CLIENT}
     container_name: client
+    # NEXT_PUBLIC_API_URL is baked in at image build time (build arg), not runtime.
+    # It is listed here as a reminder — set it as a --build-arg in your CI pipeline.
     ports:
       - "3000:3000"
     networks:
