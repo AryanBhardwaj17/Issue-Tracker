@@ -27,6 +27,7 @@ from app.core.exceptions import (
     StoryNotFoundError,
     TaskNotFoundError,
 )
+from app.models.activity_log import ActivityAction, ActivityEntityType
 from app.models.project_member import MemberRole
 from app.models.task import Task
 from app.repositories import project_members as member_repo
@@ -34,6 +35,7 @@ from app.repositories import story as story_repo
 from app.repositories import task as task_repo
 from app.schemas.common import Pagination, paginate
 from app.schemas.task import AssigneeOut, SubtaskOut, TaskCreateRequest, TaskOut, TaskUpdateRequest
+from app.services.activity_log import log_activity
 from app.utils.constants import (
     DEFAULT_PAGE,
     DEFAULT_PAGE_SIZE,
@@ -160,6 +162,18 @@ async def create_task(
         reporter_id=user.id,
         due_date=data.due_date,
     )
+
+    await log_activity(
+        db,
+        project_id=project_id,
+        entity_type=ActivityEntityType.task,
+        action=ActivityAction.created,
+        actor_id=user.id,
+        actor_name=user.name,
+        story_id=story_id,
+        task_id=task.id,
+    )
+
     await db.commit()
     await db.refresh(task)
 
@@ -216,6 +230,18 @@ async def create_subtask(
         reporter_id=user.id,
         due_date=data.due_date,
     )
+
+    await log_activity(
+        db,
+        project_id=project_id,
+        entity_type=ActivityEntityType.subtask,
+        action=ActivityAction.created,
+        actor_id=user.id,
+        actor_name=user.name,
+        story_id=parent.story_id,
+        task_id=subtask.id,
+    )
+
     await db.commit()
     await db.refresh(subtask)
 
@@ -407,7 +433,54 @@ async def update_task(
         values["is_done"] = data.is_done
 
     if values:
+        # Capture old values before mutation
+        old_values: dict[str, str | None] = {}
+        for field in values:
+            if field == "priority":
+                old_values["priority"] = task.priority if task.priority else None
+            elif field == "assignee_id":
+                old_values["assignee_id"] = str(task.assignee_id) if task.assignee_id else None
+            elif field == "due_date":
+                old_values["due_date"] = task.due_date.isoformat() if task.due_date else None
+            elif field == "is_done":
+                old_values["is_done"] = str(task.is_done)
+            else:
+                old_values[field] = getattr(task, field, None)
+
         await task_repo.update_fields(db, task_id, **values)
+
+        # Log activity per changed field
+        entity_type = ActivityEntityType.subtask if task.parent_id else ActivityEntityType.task
+        for field, new_val_raw in values.items():
+            new_val = str(new_val_raw) if new_val_raw is not None else None
+            old_val = old_values.get(field)
+
+            # Skip no-op
+            if old_val == new_val:
+                continue
+
+            # Determine action
+            if field == "is_done" and new_val == "True":
+                action = ActivityAction.completed
+            elif field == "assignee_id":
+                action = ActivityAction.assigned
+            else:
+                action = ActivityAction.field_updated
+
+            await log_activity(
+                db,
+                project_id=project_id,
+                entity_type=entity_type,
+                action=action,
+                actor_id=user.id,
+                actor_name=user.name,
+                story_id=task.story_id,
+                task_id=task_id,
+                field_name=field,
+                old_value=old_val,
+                new_value=new_val,
+            )
+
         await db.commit()
         await db.refresh(task)
 
@@ -454,6 +527,18 @@ async def soft_delete_task(
     # Cascade: soft-delete subtasks first (if this is a parent task)
     if task.parent_id is None:
         await task_repo.soft_delete_subtasks(db, task_id)
+
+    entity_type = ActivityEntityType.subtask if task.parent_id else ActivityEntityType.task
+    await log_activity(
+        db,
+        project_id=project_id,
+        entity_type=entity_type,
+        action=ActivityAction.deleted,
+        actor_id=user.id,
+        actor_name=user.name,
+        story_id=task.story_id,
+        task_id=task_id,
+    )
 
     await task_repo.soft_delete(db, task_id)
     await db.commit()

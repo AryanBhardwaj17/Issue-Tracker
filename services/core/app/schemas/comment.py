@@ -66,7 +66,9 @@ class CommentOut(CamelModel):
     """Response shape for a single comment."""
 
     id: uuid.UUID
-    user_story_id: uuid.UUID
+    user_story_id: uuid.UUID | None = None
+    task_id: uuid.UUID | None = None
+    epic_id: uuid.UUID | None = None
     author: AuthorRef
     body: str
     image_url: str | None
