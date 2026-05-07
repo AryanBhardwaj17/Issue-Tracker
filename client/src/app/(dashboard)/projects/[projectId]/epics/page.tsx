@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import Link from "next/link";
 import { useProject } from "@/hooks/useProjects";
 import { useEpics, useCreateEpic, useUpdateEpic, useDeleteEpic } from "@/hooks/useEpics";
 import { useAuthStore } from "@/stores/authStore";
@@ -131,7 +132,12 @@ function EpicCard({ epic, canEdit, projectId }: EpicCardProps) {
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-gray-900">{epic.name}</h3>
+          <Link
+            href={`/projects/${projectId}/epics/${epic.id}`}
+            className="truncate text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline"
+          >
+            {epic.name}
+          </Link>
           {epic.description && (
             <p className="mt-1 text-xs text-gray-500 line-clamp-2">{epic.description}</p>
           )}
