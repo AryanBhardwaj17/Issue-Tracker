@@ -84,3 +84,14 @@ async def integrity_error_handler(_request: Request, exc: IntegrityError) -> JSO
     if "uq_users_email" in detail:
         return JSONResponse(status_code=409, content={"detail": ERR_EMAIL_REGISTERED})
     return JSONResponse(status_code=409, content={"detail": "Duplicate value conflict"})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log the traceback but return a
+    generic 500 to avoid leaking internals in production."""
+    logger.exception("Unhandled exception: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )

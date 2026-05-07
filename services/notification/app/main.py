@@ -83,3 +83,15 @@ async def validation_exception_handler(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"success": False, "message": "Validation error", "errors": errors},
     )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log the traceback but return a
+    generic 500 to avoid leaking internals in production."""
+    logger = logging.getLogger(__name__)
+    logger.exception("Unhandled exception on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"success": False, "message": "Internal server error"},
+    )
