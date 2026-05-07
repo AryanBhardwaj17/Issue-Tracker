@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { getProject } from "@/lib/api";
+import { useTrash } from "@/hooks/useTrash";
 import Navbar from "@/components/dashboard/Navbar";
 
 // Project-scoped nav links shown in the sidebar when inside a project
@@ -44,6 +45,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     enabled: !!sidebarProjectId,
     staleTime: 30_000,
   });
+
+  const { data: trashData } = useTrash(sidebarProjectId ?? "");
+  const trashCount = trashData?.pagination?.total ?? 0;
 
   if (!isHydrated || !user) {
     return (
@@ -125,6 +129,76 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </Link>
                 );
               })}
+
+              {/* Divider before secondary links */}
+              <div className="my-1 border-t border-gray-100" />
+
+              {/* Activity */}
+              {(() => {
+                const href = `/projects/${sidebarProjectId}/activity`;
+                const active = isNavActive(href);
+                return (
+                  <Link
+                    href={href}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "bg-gray-100 font-medium text-gray-900"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <svg
+                      className="h-4 w-4 shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Activity
+                  </Link>
+                );
+              })()}
+
+              {/* Trash — badge hidden when count is 0 */}
+              {(() => {
+                const href = `/projects/${sidebarProjectId}/trash`;
+                const active = isNavActive(href);
+                return (
+                  <Link
+                    href={href}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "bg-gray-100 font-medium text-gray-900"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <svg
+                      className="h-4 w-4 shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                    Trash
+                    {trashCount > 0 && (
+                      <span className="ml-auto text-xs text-gray-400">
+                        {trashCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })()}
             </>
           ) : (
             /* Default sidebar when not inside a project */
