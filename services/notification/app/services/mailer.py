@@ -17,7 +17,7 @@ _conf = ConnectionConfig(
     MAIL_STARTTLS=settings.SMTP_USE_TLS,
     MAIL_SSL_TLS=False,
     USE_CREDENTIALS=bool(settings.SMTP_USERNAME),
-    VALIDATE_CERTS=False,
+    VALIDATE_CERTS=settings.SMTP_VALIDATE_CERTS,
 )
 
 _mail = FastMail(_conf)

@@ -1,7 +1,16 @@
 import axios from "axios";
 
+function getBaseURL(): string {
+  // Server-side (SSR): use internal Service Connect URL
+  if (typeof window === "undefined") {
+    return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "";
+  }
+  // Client-side (CSR): use the public-facing URL baked at build time
+  return process.env.NEXT_PUBLIC_API_URL || "";
+}
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: getBaseURL(),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

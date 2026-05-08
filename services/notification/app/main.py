@@ -51,6 +51,9 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+from app.api.v1.health import router as health_router
+
+app.include_router(health_router)  # /health — no prefix
 app.include_router(v1_router, prefix="/api/v1")
 
 

@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     UPLOADS_DIR: str = "/app/uploads"
     MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024
 
+    # ── S3 (AWS only) ─────────────────────────────────────────────────────────
+    USE_S3: bool = False  # True on ECS, False for local dev
+    S3_BUCKET: str = ""  # e.g. "issuetracker-uploads-prod"
+    S3_REGION: str = "us-east-1"
+
     # ── CORS ──────────────────────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
