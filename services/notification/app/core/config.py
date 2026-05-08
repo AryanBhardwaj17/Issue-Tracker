@@ -11,11 +11,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str  # postgresql+asyncpg://...
 
     # ── JWT / RS256 (public key only — Notification never signs tokens) ──────────
-    RSA_PUBLIC_KEY: str = ""  # Full PEM string (newlines as \n in env)
+    RSA_PUBLIC_KEY: str  # Full PEM string (newlines as \n in env)
     JWT_ALGORITHM: str = "RS256"
 
     # ── Message bus ─────────────────────────────────────────────────────────
-    RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
+    RABBITMQ_URL: str  # amqps://user:pass@broker.mq.region.amazonaws.com:5671
 
     # ── Email (SMTP) ────────────────────────────────────────────────────────
     SMTP_HOST: str = "localhost"
@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@issuetracker.dev"
     SMTP_USE_TLS: bool = False
+    SMTP_VALIDATE_CERTS: bool = True  # False for local MailHog, True for SendGrid
 
     # ── Frontend URL (used in email links) ──────────────────────────────
     FRONTEND_URL: str = "http://localhost:3000"

@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.git
+.env
+.env.*
+.venv
+tests/
+.pytest_cache
+.ruff_cache
+*.egg-info
+alembic/versions/__pycache__
+README.md

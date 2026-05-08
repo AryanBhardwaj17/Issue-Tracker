@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, patch
 # Set test env vars BEFORE any app imports (mailer validates MAIL_FROM at import time)
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite://")
 os.environ.setdefault("SMTP_FROM", "noreply@issuetracker.dev")
+os.environ.setdefault("RSA_PUBLIC_KEY", "test-key")
+os.environ.setdefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 
 import aio_pika
 import pytest
@@ -15,9 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import Base
 from app.models.notification import DeliveryStatus, EmailDelivery, Notification  # noqa: F401
 
-RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-
-# ── In-memory SQLite for unit tests ──────────────────────────────────────────
+RABBITMQ_URL = os.getenv(
+    "RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"
+)  # ── In-memory SQLite for unit tests ──────────────────────────────────────────
 
 _test_engine = create_async_engine("sqlite+aiosqlite://", echo=False)
 TestSessionLocal = async_sessionmaker(

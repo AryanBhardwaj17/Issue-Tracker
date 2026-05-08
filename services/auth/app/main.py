@@ -14,11 +14,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1 import router as v1_router
+from app.api.v1.health import router as health_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.exceptions import AppException
 from app.core.logging import configure_logging
 from app.grpc.server import start_grpc_server, stop_grpc_server
+from app.middleware import RequestIDMiddleware
 from app.utils.constants import ERR_EMAIL_REGISTERED, ERR_NAME_GENERATION_FAILED
 
 logger = logging.getLogger(__name__)
@@ -34,9 +36,10 @@ async def lifespan(_app: FastAPI):
     logger.info("Starting %s", settings.APP_NAME)
 
     # create_all is only used in development — in production Alembic manages the schema.
+    # checkfirst=True makes it idempotent (safe to run even if tables already exist).
     if settings.DEBUG:
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(Base.metadata.create_all, checkfirst=True)
 
     await start_grpc_server()
 
@@ -55,6 +58,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(RequestIDMiddleware)
+
+app.include_router(health_router)  # /health — no prefix
 app.include_router(v1_router)
 
 
@@ -84,3 +90,14 @@ async def integrity_error_handler(_request: Request, exc: IntegrityError) -> JSO
     if "uq_users_email" in detail:
         return JSONResponse(status_code=409, content={"detail": ERR_EMAIL_REGISTERED})
     return JSONResponse(status_code=409, content={"detail": "Duplicate value conflict"})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log the traceback but return a
+    generic 500 to avoid leaking internals in production."""
+    logger.exception("Unhandled exception: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )

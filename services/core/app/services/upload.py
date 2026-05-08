@@ -25,13 +25,17 @@ logger = logging.getLogger(__name__)
 
 async def save_image(file: UploadFile) -> str:
     """
-    Validate, store, and return the relative URL of the uploaded image.
+    Validate, store, and return the URL of the uploaded image.
 
-    Raises:
-        ValidationError (422): unsupported MIME type.
-        PayloadTooLargeError (413): file exceeds the configured size limit.
+    Delegates to S3 when USE_S3=True, otherwise writes to local disk.
     """
-    # 1. MIME check — derive from content_type, never trust the filename extension
+    if settings.USE_S3:
+        from app.services.s3 import save_image_s3
+
+        return await save_image_s3(file)
+
+    # ── Local disk upload (original logic) ────────────────────────────────
+    # 1. MIME check
     content_type = (file.content_type or "").lower()
     if content_type not in ALLOWED_IMAGE_MIMES:
         raise ValidationError(

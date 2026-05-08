@@ -130,6 +130,18 @@ async def validation_exception_handler(
     )
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log the traceback but return a
+    generic 500 to avoid leaking internals in production."""
+    logger = logging.getLogger(__name__)
+    logger.exception("Unhandled exception on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=ErrorEnvelope(message="Internal server error").model_dump(by_alias=True),
+    )
+
+
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/api/v1/health", tags=["health"])
 async def health() -> dict:

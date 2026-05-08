@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.v1 import v1_router
+from app.api.v1.health import router as health_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.exceptions import AppException
@@ -51,6 +52,7 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(health_router)  # /health — no prefix
 app.include_router(v1_router, prefix="/api/v1")
 
 
@@ -82,4 +84,16 @@ async def validation_exception_handler(
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"success": False, "message": "Validation error", "errors": errors},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log the traceback but return a
+    generic 500 to avoid leaking internals in production."""
+    logger = logging.getLogger(__name__)
+    logger.exception("Unhandled exception on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"success": False, "message": "Internal server error"},
     )

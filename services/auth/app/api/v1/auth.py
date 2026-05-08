@@ -33,21 +33,23 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         key=REFRESH_TOKEN_COOKIE,
         value=token,
         httponly=True,
-        secure=not settings.DEBUG,
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         path=AUTH_COOKIE_PATH,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
+
 
 def _clear_refresh_cookie(response: Response) -> None:
     """Delete the refresh token cookie."""
     response.delete_cookie(
         key=REFRESH_TOKEN_COOKIE,
         httponly=True,
-        secure=not settings.DEBUG,
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         path=AUTH_COOKIE_PATH,
     )
+
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +61,7 @@ async def signup(
     db: AsyncSession = Depends(get_db),
 ) -> AuthResponse:
     """Register a new user account and issue tokens."""
-    print("Signup request:", body.email) 
+
     user, tokens = await auth_service.register(
         db,
         name=body.name,
@@ -72,6 +74,7 @@ async def signup(
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
     )
+
 
 @router.post("/login", response_model=AuthResponse)
 async def login(
@@ -88,6 +91,7 @@ async def login(
         refresh_token=tokens["refresh_token"],
     )
 
+
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh(
     request: Request,
@@ -95,7 +99,7 @@ async def refresh(
     db: AsyncSession = Depends(get_db),
 ) -> AccessTokenResponse:
     """Rotate the refresh token and issue a new access token.
- 
+
     Reads the refresh token from the cookie first; falls back to the JSON body
     field ``refresh_token`` if the cookie is absent.
     """
@@ -106,15 +110,15 @@ async def refresh(
             raw_token = body.get("refresh_token")
         except Exception:
             raw_token = None
- 
+
     if not raw_token:
         raise InvalidRefreshTokenError(ERR_REFRESH_TOKEN_REQUIRED)
- 
+
     tokens = await auth_service.refresh_tokens(db, refresh_token=raw_token)
     _set_refresh_cookie(response, tokens["refresh_token"])
     return AccessTokenResponse(access_token=tokens["access_token"])
- 
- 
+
+
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
     request: Request,
@@ -129,9 +133,9 @@ async def logout(
             raw_token = body.get("refresh_token")
         except Exception:
             raw_token = None
- 
+
     if raw_token:
         await auth_service.logout(db, refresh_token=raw_token)
- 
+
     _clear_refresh_cookie(response)
     return MessageResponse(message="Logged out successfully")

@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     """
 
     # ── Database ──────────────────────────────────────────────────────────────
-    DATABASE_URL: str  
+    DATABASE_URL: str
 
     # ── JWT / RS256 ───────────────────────────────────────────────────────────
     RSA_PRIVATE_KEY: str  # Full PEM string (newlines as \n)
@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
+    # ── Cookie security ──────────────────────────────────────────────────────
+    COOKIE_SECURE: bool = False  # Set True only when behind HTTPS
+
     @field_validator("RSA_PRIVATE_KEY", "RSA_PUBLIC_KEY", mode="before")
     @classmethod
     def _expand_pem_newlines(cls, v: str) -> str:
@@ -43,7 +46,7 @@ class Settings(BaseSettings):
         if isinstance(v, str) and "\\n" in v:
             return v.replace("\\n", "\n")
         return v
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
