@@ -150,8 +150,8 @@ resource "aws_iam_role" "gitlab_ci" {
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
-          StringEquals = {
-            "gitlab.com:sub" = "project_path:${var.gitlab_project_path}:ref_type:branch:ref:main"
+          StringLike = {
+            "gitlab.com:sub" = "project_path:${var.gitlab_project_path}:ref_type:branch:ref:*"
           }
         }
       }
