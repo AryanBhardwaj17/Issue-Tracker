@@ -3,9 +3,13 @@
 *.tfstate
 *.tfstate.backup
 *.tfplan
+tfplan
+s3plan
+mqplan
+clientfix
+db-init-task.json
 terraform.tfvars
 .terraform.lock.hcl
-mqplan
 
 # Secrets
 *.pem
