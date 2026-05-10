@@ -11,6 +11,7 @@ COPY . .
 
 # Run as non-root user
 RUN adduser --disabled-password --no-create-home appuser
+RUN mkdir -p /app/uploads && chown appuser:appuser /app/uploads
 USER appuser
 
 EXPOSE 8000
