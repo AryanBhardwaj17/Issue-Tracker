@@ -187,6 +187,12 @@ test:client:
   image:
     name: amazon/aws-cli:latest
     entrypoint: [""]
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   id_tokens:
     GITLAB_OIDC_TOKEN:
       aud: https://git.epam.com
