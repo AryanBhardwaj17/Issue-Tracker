@@ -130,9 +130,9 @@ resource "aws_iam_role_policy" "ecs_task_exec" {
 # ── GitLab CI OIDC Identity Provider ─────────────────────────────────────────
 
 resource "aws_iam_openid_connect_provider" "gitlab" {
-  url             = "https://gitlab.com"
-  client_id_list  = ["https://gitlab.com"]
-  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"]
+  url             = "https://git.epam.com"
+  client_id_list  = ["https://git.epam.com"]
+  thumbprint_list = ["cd84380d3ac3ea51efe44611cf457386cbe9c684"]
 }
 
 # ── GitLab CI Deploy Role ─────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ resource "aws_iam_role" "gitlab_ci" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringLike = {
-            "gitlab.com:sub" = "project_path:${var.gitlab_project_path}:ref_type:branch:ref:*"
+            "git.epam.com:sub" = "project_path:${var.gitlab_project_path}:ref_type:branch:ref:*"
           }
         }
       }

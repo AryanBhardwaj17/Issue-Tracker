@@ -189,7 +189,7 @@ test:client:
     entrypoint: [""]
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://git.epam.com
   before_script:
     - amazon-linux-extras install docker 2>/dev/null || yum install -y docker 2>/dev/null || true
     - >
@@ -263,7 +263,7 @@ build:client:
     entrypoint: [""]
   id_tokens:
     GITLAB_OIDC_TOKEN:
-      aud: https://gitlab.com
+      aud: https://git.epam.com
   before_script:
     - >
       export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
