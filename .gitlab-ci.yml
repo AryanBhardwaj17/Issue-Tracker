@@ -5,6 +5,19 @@ stages:
   - deploy
   - smoke-test
 
+# ── Workflow — controls WHICH pipelines are created ───────────────────────────
+# 1. MR events: always create a pipeline (lint + test gate the merge)
+# 2. If a push happens on a branch with an open MR, skip (MR pipeline covers it)
+# 3. Push to dev: full pipeline (lint + test + build + deploy)
+# 4. Push to main: lint + test only
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "main"
+
 # ── Variables ─────────────────────────────────────────────────────────────────
 
 variables:
@@ -327,10 +340,7 @@ smoke-test:
     - echo "Waiting 60s for ECS rolling deployment..."
     - sleep 60
     - |
-      echo "=== Auth Health ==="
-      curl -sf http://$ALB_DNS/api/v1/health || (echo "FAIL: Auth health check" && exit 1)
-      echo ""
-      echo "=== Core Health ==="
+      echo "=== API Health (Core) ==="
       curl -sf http://$ALB_DNS/api/v1/health || (echo "FAIL: Core health check" && exit 1)
       echo ""
       echo "=== Client ==="
