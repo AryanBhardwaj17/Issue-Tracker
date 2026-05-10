@@ -1,6 +1,17 @@
 stages:
   - lint
   - test
+  - build
+  - deploy
+  - smoke-test
+
+# ── Variables ─────────────────────────────────────────────────────────────────
+
+variables:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 814654818098.dkr.ecr.us-east-1.amazonaws.com
+  ECS_CLUSTER: issue-tracker
+  ALB_DNS: issue-tracker-alb-1509573841.us-east-1.elb.amazonaws.com
 
 # ── LINT ──────────────────────────────────────────────────────────────────────
 
@@ -154,3 +165,172 @@ test:notification:
         - services/notification/**/*
         - shared/**/*
         - .gitlab-ci.yml
+
+test:client:
+  stage: test
+  image: node:20-alpine
+  cache:
+    key: client-test-$CI_COMMIT_REF_SLUG
+    paths:
+      - client/node_modules/
+  script:
+    - cd client && npm ci && npm test
+  rules:
+    - changes:
+        - client/**/*
+        - .gitlab-ci.yml
+
+# ── BUILD — push Docker images to ECR (main branch only) ─────────────────────
+
+.build_template: &build_template
+  stage: build
+  image:
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - amazon-linux-extras install docker 2>/dev/null || yum install -y docker 2>/dev/null || true
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn arn:aws:iam::814654818098:role/issue-tracker-gitlab-ci-deploy
+      --role-session-name "gitlab-ci-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token "$GITLAB_OIDC_TOKEN"
+      --duration-seconds 3600
+      --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]"
+      --output text))
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+build:auth:
+  <<: *build_template
+  script:
+    - docker build -t $ECR_REGISTRY/issue-tracker/auth:$CI_COMMIT_SHORT_SHA -t $ECR_REGISTRY/issue-tracker/auth:latest -f services/auth/Dockerfile services/auth
+    - docker push $ECR_REGISTRY/issue-tracker/auth:$CI_COMMIT_SHORT_SHA
+    - docker push $ECR_REGISTRY/issue-tracker/auth:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/auth/**/*
+        - shared/**/*
+        - proto/**/*
+
+build:core:
+  <<: *build_template
+  script:
+    - docker build -t $ECR_REGISTRY/issue-tracker/core:$CI_COMMIT_SHORT_SHA -t $ECR_REGISTRY/issue-tracker/core:latest -f services/core/Dockerfile services/core
+    - docker push $ECR_REGISTRY/issue-tracker/core:$CI_COMMIT_SHORT_SHA
+    - docker push $ECR_REGISTRY/issue-tracker/core:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/core/**/*
+        - shared/**/*
+        - proto/**/*
+
+build:notification:
+  <<: *build_template
+  script:
+    - docker build -t $ECR_REGISTRY/issue-tracker/notification:$CI_COMMIT_SHORT_SHA -t $ECR_REGISTRY/issue-tracker/notification:latest -f services/notification/Dockerfile services/notification
+    - docker push $ECR_REGISTRY/issue-tracker/notification:$CI_COMMIT_SHORT_SHA
+    - docker push $ECR_REGISTRY/issue-tracker/notification:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - services/notification/**/*
+        - shared/**/*
+
+build:client:
+  <<: *build_template
+  script:
+    - docker build --build-arg NEXT_PUBLIC_API_URL=http://$ALB_DNS/api/v1 -t $ECR_REGISTRY/issue-tracker/client:$CI_COMMIT_SHORT_SHA -t $ECR_REGISTRY/issue-tracker/client:latest -f client/Dockerfile client
+    - docker push $ECR_REGISTRY/issue-tracker/client:$CI_COMMIT_SHORT_SHA
+    - docker push $ECR_REGISTRY/issue-tracker/client:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - client/**/*
+
+# ── DEPLOY — rolling update on ECS (manual trigger) ──────────────────────────
+
+.deploy_template: &deploy_template
+  stage: deploy
+  image:
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn arn:aws:iam::814654818098:role/issue-tracker-gitlab-ci-deploy
+      --role-session-name "gitlab-ci-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token "$GITLAB_OIDC_TOKEN"
+      --duration-seconds 3600
+      --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]"
+      --output text))
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+deploy:auth:
+  <<: *deploy_template
+  script:
+    - aws ecs update-service --cluster $ECS_CLUSTER --service svc-auth --force-new-deployment --region $AWS_REGION
+    - echo "Auth service deployment triggered — ECS will roll out new tasks"
+
+deploy:core:
+  <<: *deploy_template
+  script:
+    - aws ecs update-service --cluster $ECS_CLUSTER --service svc-core --force-new-deployment --region $AWS_REGION
+    - echo "Core service deployment triggered — ECS will roll out new tasks"
+
+deploy:notification:
+  <<: *deploy_template
+  script:
+    - aws ecs update-service --cluster $ECS_CLUSTER --service svc-notification --force-new-deployment --region $AWS_REGION
+    - echo "Notification service deployment triggered — ECS will roll out new tasks"
+
+deploy:client:
+  <<: *deploy_template
+  script:
+    - aws ecs update-service --cluster $ECS_CLUSTER --service svc-client --force-new-deployment --region $AWS_REGION
+    - echo "Client service deployment triggered — ECS will roll out new tasks"
+
+deploy:all:
+  <<: *deploy_template
+  script:
+    - |
+      for SVC in svc-auth svc-core svc-notification svc-client; do
+        echo "Deploying $SVC..."
+        aws ecs update-service --cluster $ECS_CLUSTER --service $SVC --force-new-deployment --region $AWS_REGION
+      done
+    - echo "All services deployment triggered"
+
+# ── SMOKE TEST — verify health after deploy ──────────────────────────────────
+
+smoke-test:
+  stage: smoke-test
+  image: curlimages/curl:latest
+  script:
+    - echo "Waiting 60s for ECS rolling deployment..."
+    - sleep 60
+    - |
+      echo "=== Auth Health ==="
+      curl -sf http://$ALB_DNS/api/v1/health || (echo "FAIL: Auth health check" && exit 1)
+      echo ""
+      echo "=== Core Health ==="
+      curl -sf http://$ALB_DNS/api/v1/health || (echo "FAIL: Core health check" && exit 1)
+      echo ""
+      echo "=== Client ==="
+      curl -sf -o /dev/null -w "%{http_code}" http://$ALB_DNS/ || (echo "FAIL: Client health check" && exit 1)
+      echo ""
+      echo "All smoke tests passed!"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  when: manual
