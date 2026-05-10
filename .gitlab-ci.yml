@@ -203,7 +203,7 @@ test:client:
       --output text))
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
 
 build:auth:
   <<: *build_template
@@ -212,7 +212,7 @@ build:auth:
     - docker push $ECR_REGISTRY/issue-tracker/auth:$CI_COMMIT_SHORT_SHA
     - docker push $ECR_REGISTRY/issue-tracker/auth:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - services/auth/**/*
         - shared/**/*
@@ -225,7 +225,7 @@ build:core:
     - docker push $ECR_REGISTRY/issue-tracker/core:$CI_COMMIT_SHORT_SHA
     - docker push $ECR_REGISTRY/issue-tracker/core:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - services/core/**/*
         - shared/**/*
@@ -238,7 +238,7 @@ build:notification:
     - docker push $ECR_REGISTRY/issue-tracker/notification:$CI_COMMIT_SHORT_SHA
     - docker push $ECR_REGISTRY/issue-tracker/notification:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - services/notification/**/*
         - shared/**/*
@@ -250,7 +250,7 @@ build:client:
     - docker push $ECR_REGISTRY/issue-tracker/client:$CI_COMMIT_SHORT_SHA
     - docker push $ECR_REGISTRY/issue-tracker/client:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - client/**/*
 
@@ -276,7 +276,7 @@ build:client:
       --output text))
   when: manual
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
 
 deploy:auth:
   <<: *deploy_template
@@ -332,5 +332,5 @@ smoke-test:
       echo ""
       echo "All smoke tests passed!"
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deployment"
+    - if: $CI_COMMIT_BRANCH == "main"
   when: manual
